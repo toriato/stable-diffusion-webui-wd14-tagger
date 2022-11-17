@@ -50,6 +50,9 @@ Please ask the original author MrSmilingWolf#5991 for questions related to model
 
 1. Restart or start Web UI and have fun :)
 
+## Screenshot
+![Screenshot](docs/screenshot.png)
+
 ## Copyright
 
 Public domain, only for my parts
