@@ -17,7 +17,6 @@ tags_path = os.path.join(
     script_dir, "2022_0000_0899_6549", "selected_tags.csv")
 
 try:
-    # not sure this line is valid or not... I'm not good at python :\
     import Utils.dbimutils as dbimutils
 except ImportError:
     raise Exception(
@@ -29,13 +28,13 @@ if not os.path.isdir(model_dir):
 if not os.path.isfile(tags_path):
     raise Exception('tags not found, did you follow the instruction?')
 
-# tf2 maps nearly all vram by default, so we limit this
+# tensorflow maps nearly all vram by default, so we limit this
 # https://www.tensorflow.org/guide/gpu#limiting_gpu_memory_growth
 # TODO: is safe to set set_memory_growth...?
 for device in tf.config.experimental.list_physical_devices('GPU'):
     tf.config.experimental.set_memory_growth(device, True)
 
-# load model into GPU or CPU
+# load model into gpu or cpu
 # TODO: is safe to use None with the tensorflow.device(device_name)?
 device_name = None
 
@@ -124,7 +123,7 @@ def on_ui_tabs():
             all_tags = selected_tags.copy()
             all_tags['probs'] = probs[0]
 
-            # first 4 items is for rating (general, sensitive, questionable, explicit)
+            # first 4 items are for rating (general, sensitive, questionable, explicit)
             ratings = all_tags[:4][['name', 'probs']]
 
             # rest are regular tags
