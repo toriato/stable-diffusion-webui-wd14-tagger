@@ -74,7 +74,6 @@ def on_ui_tabs():
                     placeholder='Found tags'
                 )
 
-                # TODO: button to move found tags to txt2img or img2img
                 with gr.Row():
                     parameters_copypaste.bind_buttons(
                         parameters_copypaste.create_buttons(
