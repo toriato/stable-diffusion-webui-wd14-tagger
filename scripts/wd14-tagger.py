@@ -6,7 +6,7 @@ import tensorflow as tf
 import cv2
 
 from webui import wrap_gradio_gpu_call
-from modules import scripts, script_callbacks
+from modules import shared, scripts, script_callbacks
 from modules import generation_parameters_copypaste as parameters_copypaste
 
 image_size = 448
@@ -29,8 +29,29 @@ if not os.path.isdir(model_dir):
 if not os.path.isfile(tags_path):
     raise Exception('tags not found, did you follow the instruction?')
 
-# TODO: support gpu?
-with tf.device('/cpu:0'):
+# tf2 maps nearly all vram by default, so we limit this
+# https://www.tensorflow.org/guide/gpu#limiting_gpu_memory_growth
+# TODO: is safe to set set_memory_growth...?
+for device in tf.config.experimental.list_physical_devices('GPU'):
+    tf.config.experimental.set_memory_growth(device, True)
+
+# load model into GPU or CPU
+# TODO: is safe to use None with the tensorflow.device(device_name)?
+device_name = None
+
+if shared.cmd_opts.use_cpu == 'all' or shared.cmd_opts.use_cpu == 'interrogate':
+    device_name = '/cpu:0'  # 0 by default?
+else:
+    device_name = '/gpu:0'  # 0 by default?
+
+    if shared.cmd_opts.device_id is not None:
+        try:
+            device_name = f'/gpu:{int(shared.cmd_opts.device_id)}'
+        except ValueError:
+            print('--device-id is not a integer')
+
+with tf.device(device_name):
+    # TODO: need gc after restart, is there anyway to hook into restart event?
     model = tf.keras.models.load_model(model_dir, compile=False)
 
 selected_tags = pd.read_csv(tags_path)
