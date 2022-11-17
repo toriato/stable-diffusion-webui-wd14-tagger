@@ -19,7 +19,8 @@ Please ask the original author MrSmilingWolf#5991 for questions related to model
 
 ## Installation
 
-1. Clone this repo to under `extensions/`
+1. *Extensions* -> *Install from URL* -> Enter URL of this repository -> Press *Install* button
+   - or clone this repository under `extensions/`
    ```sh
    $ git clone https://github.com/toriato/stable-diffusion-webui-wd14-tagger.git extensions/wd14-tagger
    ```
@@ -48,7 +49,7 @@ Please ask the original author MrSmilingWolf#5991 for questions related to model
 
    ```
 
-1. Restart or start Web UI and have fun :)
+1. Restart by press *Apply and Restart UI* button from *Installed* under *Extensions* tab and have fun :)
 
 ## Screenshot
 ![Screenshot](docs/screenshot.png)
