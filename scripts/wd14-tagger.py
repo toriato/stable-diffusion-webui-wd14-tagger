@@ -134,8 +134,6 @@ def on_ui_tabs():
             rating_confidents = dict(ratings.values)
             tag_confidents = dict(tags.values)
 
-            # TODO: implement add_confident
-
             if sort_by_alpha:
                 tags = tags.sort_values('name')
 
@@ -149,6 +147,10 @@ def on_ui_tabs():
                     r'\\\1',
                     regex=True
                 )
+
+            if add_confident:
+                tags['name'] = '(' + tags['name'] + ':' + \
+                    tags['probs'].astype(str) + ')'
 
             return [
                 ', '.join(tags['name']),
