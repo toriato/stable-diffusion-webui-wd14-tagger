@@ -15,7 +15,7 @@ OTOH, ensembling seems to give a decent boost in validation metrics, so if we ev
 
 I didn't create a model and most of codes are heavily borrowed from original.
 
-Please ask the original author Mr Smilling Wolf#5991 for questions related to model or additional training.
+Please ask the original author MrSmilingWolf#5991 for questions related to model or additional training.
 
 ## Installation
 
