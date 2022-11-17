@@ -1,4 +1,7 @@
 __pycache__
+.vscode
+.venv
+.env
 
 # original files
 2022_0000_0899_6549/
