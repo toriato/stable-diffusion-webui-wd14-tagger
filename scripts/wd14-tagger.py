@@ -15,6 +15,13 @@ model_dir = os.path.join(script_dir, "networks", "ViTB16_11_03_2022_07h05m53s")
 tags_path = os.path.join(
     script_dir, "2022_0000_0899_6549", "selected_tags.csv")
 
+try:
+    # not sure this line is valid or not... I'm not good at python :\
+    import Utils.dbimutils as dbimutils
+except ImportError:
+    raise Exception(
+        'Utils.dbimutils not found, did you follow the instruction?')
+
 if not os.path.isdir(model_dir):
     raise Exception('model not found, did you follow the instruction?')
 
@@ -29,12 +36,6 @@ selected_tags = pd.read_csv(tags_path)
 
 
 def on_ui_tabs():
-    try:
-        from Utils import dbimutils
-    except ImportError:
-        print('Utils.dbimutils not found, did you follow the instruction?')
-        return
-
     with gr.Blocks(analytics_enabled=False) as tagger_interface:
         with gr.Row().style(equal_height=False):
             with gr.Column(variant='panel'):
