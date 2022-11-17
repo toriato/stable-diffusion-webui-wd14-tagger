@@ -21,9 +21,9 @@ Please ask the original author MrSmilingWolf#5991 for questions related to model
 
 1. *Extensions* -> *Install from URL* -> Enter URL of this repository -> Press *Install* button
    - or clone this repository under `extensions/`
-   ```sh
-   $ git clone https://github.com/toriato/stable-diffusion-webui-wd14-tagger.git extensions/wd14-tagger
-   ```
+     ```sh
+     $ git clone https://github.com/toriato/stable-diffusion-webui-wd14-tagger.git extensions/wd14-tagger
+     ```
 
 1. Download the compressed model file from the link below
    1. Join the [SD Training Labs](https://discord.gg/zUDeSwMf2k) server
