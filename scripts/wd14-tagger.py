@@ -137,7 +137,7 @@ def on_ui_tabs():
             # TODO: implement add_confident
 
             if sort_by_alpha:
-                tags = tags.sort_index(by='name')
+                tags = tags.sort_values('name')
 
             if space_instead_underscore:
                 tags['name'] = tags['name'].str.replace('_', ' ')
@@ -164,8 +164,8 @@ def on_ui_tabs():
                 inputs=[
                     image,
                     threshold,
-                    add_confident,
                     sort_by_alpha,
+                    add_confident,
                     space_instead_underscore,
                     escape_tags
                 ],
