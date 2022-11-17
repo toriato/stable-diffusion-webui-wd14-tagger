@@ -7,6 +7,7 @@ import cv2
 
 from webui import wrap_gradio_gpu_call
 from modules import scripts, script_callbacks
+from modules import generation_parameters_copypaste as parameters_copypaste
 
 image_size = 448
 
@@ -63,6 +64,8 @@ def on_ui_tabs():
                     type="pil"
                 )
 
+                submit = gr.Button(value='Interrogate')
+
                 info = gr.HTML()
 
             with gr.Column(variant='panel'):
@@ -72,11 +75,19 @@ def on_ui_tabs():
                 )
 
                 # TODO: button to move found tags to txt2img or img2img
+                with gr.Row():
+                    parameters_copypaste.bind_buttons(
+                        parameters_copypaste.create_buttons(
+                            ["txt2img", "img2img"],
+                        ),
+                        None,
+                        tags
+                    )
 
                 rating_confidents = gr.Label(label='Rating confidents')
                 tag_confidents = gr.Label(label='Tag confidents')
 
-        def on_image_change(image, threshold, sort_by_alpha, add_confident, space_instead_underscore, escape_tags):
+        def give_me_the_tags(image, threshold, sort_by_alpha, add_confident, space_instead_underscore, escape_tags):
             if image is None:
                 return ['', None, None, '']
 
@@ -127,23 +138,25 @@ def on_ui_tabs():
                 ''
             ]
 
-        image.change(
-            fn=wrap_gradio_gpu_call(on_image_change),
-            inputs=[
-                image,
-                threshold,
-                add_confident,
-                sort_by_alpha,
-                space_instead_underscore,
-                escape_tags
-            ],
-            outputs=[
-                tags,
-                rating_confidents,
-                tag_confidents,
-                info
-            ]
-        )
+        # register events
+        for func in [image.change, submit.click]:
+            func(
+                fn=wrap_gradio_gpu_call(give_me_the_tags),
+                inputs=[
+                    image,
+                    threshold,
+                    add_confident,
+                    sort_by_alpha,
+                    space_instead_underscore,
+                    escape_tags
+                ],
+                outputs=[
+                    tags,
+                    rating_confidents,
+                    tag_confidents,
+                    info
+                ]
+            )
 
     return [(tagger_interface, "Tagger", "tagger")]
 
