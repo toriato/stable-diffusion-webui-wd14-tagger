@@ -1,14 +1,16 @@
 import os
+import json
 import gradio as gr
 
 from pathlib import Path
+from glob import glob
 from PIL import Image, UnidentifiedImageError
 
 from webui import wrap_gradio_gpu_call
 from modules import shared, scripts, script_callbacks
 from modules import generation_parameters_copypaste as parameters_copypaste
 
-from tagger import supported_extensions, interrogate_tags
+from tagger import supported_extensions, interrogate_tags, postprocess_tags
 
 
 def on_ui_tabs():
@@ -71,13 +73,18 @@ def on_ui_tabs():
                     value=0.35
                 )
 
-                sort_by_alpha = gr.Checkbox(
+                sort_by_alphabetical_order = gr.Checkbox(
                     label='Sort by alphabetical order')
-                add_confident = gr.Checkbox(
+                add_confident_as_weight = gr.Checkbox(
                     label='Include confident of tags matches in results')
-                space_instead_underscore = gr.Checkbox(
+                replace_underscore = gr.Checkbox(
                     label='Use spaces instead of underscore')
-                escape_tags = gr.Checkbox(
+                replace_underscore_excludes = gr.Textbox(
+                    label='Excudes (split by comma)',
+                    # kaomoji from WD 1.4 tagger csv. thanks, Meow-San#5400!
+                    value='0_0, (o)_(o), +_+, +_-, ._., <o>_<o>, <|>_<|>, =_=, >_<, 3_3, 6_9, >_o, @_@, ^_^, o_o, u_u, x_x, |_|, ||_||'
+                )
+                escape_tag = gr.Checkbox(
                     label='Escape brackets')
 
             # output components
@@ -103,18 +110,33 @@ def on_ui_tabs():
         def give_me_the_tags(
             image: Image,
             batch_input_glob: str, batch_input_recursive: bool, batch_output_dir: str, batch_output_type: str,
-            threshold: bool, sort_by_alpha: bool, add_confident: bool, space_instead_underscore: bool, escape_tags: bool
+            threshold: float,
+            sort_by_alphabetical_order: bool,
+            add_confident_as_weight: bool,
+            replace_underscore: bool,
+            replace_underscore_excludes: str,
+            escape_tag: bool
         ):
+            postprocess_opts = (
+                threshold,
+                sort_by_alphabetical_order,
+                add_confident_as_weight,
+                replace_underscore,
+                map(str.strip, replace_underscore_excludes.split(',')),
+                escape_tag
+            )
+
             # single process
             if image is not None:
-                outputs = [*interrogate_tags(
-                    image,
-                    threshold, sort_by_alpha, add_confident, space_instead_underscore, escape_tags
-                )]
+                ratings, tags = interrogate_tags(image)
+                processed_tags = postprocess_tags(tags, *postprocess_opts)
 
-                outputs[0] = ', '.join(outputs[0])
-
-                return [*outputs, '']
+                return [
+                    ', '.join(processed_tags),
+                    ratings,
+                    tags,
+                    ''
+                ]
 
             # batch process
             batch_input_glob = batch_input_glob.strip()
@@ -125,13 +147,23 @@ def on_ui_tabs():
                 base_dir = batch_input_glob.replace('?', '*')
                 base_dir = base_dir.split('/*').pop(0)
 
-                from glob import glob
-                for path in glob(batch_input_glob, recursive=batch_input_recursive):
-                    path = Path(path)
+                # this line is moved here because some reason
+                # PIL.Image.registered_extensions() returns only PNG if you call too early
+                supported_extensions = [
+                    e
+                    for e, f in Image.registered_extensions().items()
+                    if f in Image.OPEN
+                ]
 
-                    if path.suffix not in supported_extensions:
-                        continue
+                paths = [
+                    Path(p)
+                    for p in glob(batch_input_glob, recursive=batch_input_recursive)
+                    if '.' + p.split('.').pop().lower() in supported_extensions
+                ]
 
+                print(f'found {len(paths)} image(s)')
+
+                for path in paths:
                     try:
                         image = Image.open(path)
                     except UnidentifiedImageError:
@@ -139,14 +171,12 @@ def on_ui_tabs():
                         print(f'${path} is not supported image type')
                         continue
 
-                    tag_names, rating_confidents, tag_confidents = interrogate_tags(
-                        image,
-                        threshold, sort_by_alpha, add_confident, space_instead_underscore, escape_tags
-                    )
+                    ratings, tags = interrogate_tags(image)
+                    processed_tags = postprocess_tags(tags, *postprocess_opts)
 
                     # TODO: switch for less print
                     print(
-                        f'found {len(tag_names)} tags with {list(rating_confidents.keys())[0]} rating from {path}'
+                        f'found {len(processed_tags)} tags with {list(ratings.keys())[0]} rating from {path}'
                     )
 
                     # guess the output path
@@ -165,14 +195,14 @@ def on_ui_tabs():
 
                     # save output
                     if batch_output_type == 'JSON':
-                        import json
-                        output = json.dumps(
-                            (rating_confidents, tag_confidents))
+                        output = json.dumps((ratings, tags))
                     else:
-                        output = ', '.join(tag_names)
+                        output = ', '.join(processed_tags)
 
                     with output_path.open('w') as f:
                         f.write(output)
+
+                print('all done :)')
 
             return ['', None, None, '']
 
@@ -192,10 +222,11 @@ def on_ui_tabs():
 
                     # options
                     threshold,
-                    sort_by_alpha,
-                    add_confident,
-                    space_instead_underscore,
-                    escape_tags
+                    sort_by_alphabetical_order,
+                    add_confident_as_weight,
+                    replace_underscore,
+                    replace_underscore_excludes,
+                    escape_tag
                 ],
                 outputs=[
                     tags,

@@ -1,20 +1,16 @@
 import os
-import gradio as gr
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 import cv2
 
-from typing import Tuple, Dict
-from pandas import Series
+from typing import Tuple, List, Dict
 from PIL import Image
 
 from modules import shared, scripts
+from modules.deepbooru import re_special as tag_escape_pattern
 
 trained_image_size = 448
-supported_extensions = [
-    e for e, f in Image.registered_extensions().items() if f in Image.OPEN
-]
 
 script_dir = scripts.basedir()
 model_dir = os.path.join(script_dir, "networks", "ViTB16_11_03_2022_07h05m53s")
@@ -59,13 +55,9 @@ with tf.device(device_name):
 selected_tags = pd.read_csv(tags_path)
 
 
-def interrogate_tags(
-    image: Image,
-    threshold=0.35, sort_by_alpha=False, add_confident=False, space_instead_underscore=False, escape_tags=False
-) -> Tuple[
-    Series,  # filtered and sorted tag names
-    Dict[str, int],  # found rating tags (tag, confident)
-    Dict[str, int]  # found general tags (tag, confident)
+def interrogate_tags(image: Image) -> Tuple[
+    Dict[str, float],  # found rating tags (tag, confident)
+    Dict[str, float]  # found general tags (tag, confident)
 ]:
     image.convert("RGB")
     image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
@@ -75,38 +67,56 @@ def interrogate_tags(
     image = image.astype(np.float32)
     image = np.expand_dims(image, 0)
 
-    probs = model(image, training=False)
+    confidents = model(image, training=False)
 
-    all_tags = selected_tags.copy()
-    all_tags['probs'] = probs[0]
+    all_tags = selected_tags[:][['name']]
+    all_tags['confidents'] = confidents[0]
 
     # first 4 items are for rating (general, sensitive, questionable, explicit)
-    ratings = all_tags[:4][['name', 'probs']]
+    ratings = dict(all_tags[:4].values)
 
     # rest are regular tags
-    tags = all_tags[4:]
-    tags = tags[tags['probs'] > threshold]
-    tags = tags[['name', 'probs']]
+    tags = dict(all_tags[4:].values)
 
-    rating_confidents = dict(ratings.values)
-    tag_confidents = dict(tags.values)
+    return ratings, tags
 
-    if sort_by_alpha:
-        tags = tags.sort_values('name')
 
-    if space_instead_underscore:
-        tags['name'] = tags['name'].str.replace('_', ' ')
+def postprocess_tags(
+    tags: Dict[str, float],
 
-    if escape_tags:
-        from modules.deepbooru import re_special
-        tags['name'] = tags['name'].str.replace(
-            re_special,
-            r'\\\1',
-            regex=True
+    threshold=0.35,
+    sort_by_alphabetical_order=False,
+    add_confident_as_weight=False,
+    replace_underscore=False,
+    replace_underscore_excludes: List[str] = [],
+    escape_tag=False
+) -> Dict[str, float]:
+
+    tags = {t: c for t, c in tags.items() if c >= threshold}
+
+    # sort by tag name or confident
+    tags = {
+        t: c
+        for t, c in sorted(
+            tags.items(),
+            key=lambda i: i[0 if sort_by_alphabetical_order else 1],
+            reverse=not sort_by_alphabetical_order
         )
+    }
 
-    if add_confident:
-        tags['name'] = '(' + tags['name'] + ':' + \
-            tags['probs'].astype(str) + ')'
+    for tag in list(tags):
+        new_tag = tag
 
-    return tags['name'], rating_confidents, tag_confidents
+        if replace_underscore and tag not in replace_underscore_excludes:
+            new_tag = tag.replace('_', ' ')
+
+        if escape_tag:
+            new_tag = tag.replace(tag_escape_pattern, r'\\\1')
+
+        if add_confident_as_weight:
+            new_tag = f'({tag}:{tags[tag]})'
+
+        if new_tag != tag:
+            tags[new_tag] = tags.pop(tag)
+
+    return tags
