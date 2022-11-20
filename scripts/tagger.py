@@ -10,7 +10,7 @@ from webui import wrap_gradio_gpu_call
 from modules import shared, scripts, script_callbacks
 from modules import generation_parameters_copypaste as parameters_copypaste
 
-from tagger import supported_extensions, interrogate_tags, postprocess_tags
+from tagger import interrogate_tags, postprocess_tags
 
 
 def on_ui_tabs():
