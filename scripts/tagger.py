@@ -12,6 +12,7 @@ from modules import shared, scripts, script_callbacks
 from modules import generation_parameters_copypaste as parameters_copypaste
 
 from tagger import interrogate_tags, postprocess_tags
+from format import FormatInfo, format_pattern, format
 
 
 def split_str(s: str, separator=',') -> List[str]:
@@ -20,8 +21,6 @@ def split_str(s: str, separator=',') -> List[str]:
 
 def on_ui_tabs():
     with gr.Blocks(analytics_enabled=False) as tagger_interface:
-        dummy_component = gr.Label(visible=False)
-
         with gr.Row().style(equal_height=False):
             with gr.Column(variant='panel'):
 
@@ -36,9 +35,11 @@ def on_ui_tabs():
                         )
 
                     if shared.cmd_opts.hide_ui_dir_config:
+                        dummy_component = gr.Label(visible=False)
                         batch_input_glob = dummy_component
                         batch_input_recursive = dummy_component
                         batch_output_dir = dummy_component
+                        batch_output_filename_format = dummy_component
                         batch_output_type = dummy_component
 
                     else:
@@ -64,6 +65,37 @@ def on_ui_tabs():
                                     'JSON'
                                 ]
                             )
+
+                            batch_output_filename_format = gr.Textbox(
+                                label='Output filename format',
+                                placeholder='Leave blank to use same filename as original.',
+                                value='[name].[output_extension]'
+                            )
+
+                            import hashlib
+                            with gr.Accordion(
+                                label='Output filename formats',
+                                open=False
+                            ):
+                                gr.Markdown(
+                                    value=f'''
+                                    ### Related to original file
+                                    - `[name]`: Original filename without extension
+                                    - `[extension]`: Original extension
+                                    - `[hash:<algorithms>]`: Original extension
+                                      Available algorithms: `{', '.join(hashlib.algorithms_available)}`
+
+                                    ### Related to output file
+                                    - `[output_extension]`: Output extension (has no dot)
+
+                                    ## Examples
+                                    ### Original filename without extension
+                                    `[name].[output_extension]`
+
+                                    ### Original file's hash (good for deleting duplication)
+                                    `[hash:sha1].[output_extension]`
+                                    '''
+                                )
 
                 submit = gr.Button(value='Interrogate')
 
@@ -118,7 +150,11 @@ def on_ui_tabs():
 
         def give_me_the_tags(
             image: Image,
-            batch_input_glob: str, batch_input_recursive: bool, batch_output_dir: str, batch_output_type: str,
+            batch_input_glob: str,
+            batch_input_recursive: bool,
+            batch_output_dir: str,
+            batch_output_type: str,
+            batch_output_filename_format: str,
 
             threshold: float,
             exclude_tags: str,
@@ -154,6 +190,7 @@ def on_ui_tabs():
             # batch process
             batch_input_glob = batch_input_glob.strip()
             batch_output_dir = batch_output_dir.strip()
+            batch_output_filename_format = batch_output_filename_format.strip()
 
             if batch_input_glob != '':
                 # if there is no glob pattern, insert it automatically
@@ -168,7 +205,7 @@ def on_ui_tabs():
 
                 # check the input directory path
                 if not os.path.isdir(base_dir):
-                    return ['', None, None, f'input path is not a directory']
+                    return ['', None, None, 'input path is not a directory']
 
                 # this line is moved here because some reason
                 # PIL.Image.registered_extensions() returns only PNG if you call too early
@@ -212,7 +249,21 @@ def on_ui_tabs():
                     if batch_output_type == 'JSON':
                         output_ext = 'json'
 
-                    output_path = Path(output_dir, f'{path}.{output_ext}')
+                    # format output filename
+                    format_info = FormatInfo(path, output_ext)
+
+                    try:
+                        formatted_output_filename = format_pattern.sub(
+                            lambda m: format(m, format_info),
+                            batch_output_filename_format
+                        )
+                    except (TypeError, ValueError) as error:
+                        return ['', None, None, str(error)]
+
+                    output_path = Path(
+                        output_dir,
+                        formatted_output_filename
+                    )
 
                     os.makedirs(output_dir, exist_ok=True)
 
@@ -242,6 +293,7 @@ def on_ui_tabs():
                     batch_input_recursive,
                     batch_output_dir,
                     batch_output_type,
+                    batch_output_filename_format,
 
                     # options
                     threshold,
