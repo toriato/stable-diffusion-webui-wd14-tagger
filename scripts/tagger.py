@@ -2,6 +2,7 @@ import os
 import json
 import gradio as gr
 
+from typing import List
 from pathlib import Path
 from glob import glob
 from PIL import Image, UnidentifiedImageError
@@ -11,6 +12,10 @@ from modules import shared, scripts, script_callbacks
 from modules import generation_parameters_copypaste as parameters_copypaste
 
 from tagger import interrogate_tags, postprocess_tags
+
+
+def split_str(s: str, separator=',') -> List[str]:
+    return list(map(str.strip, s.split(separator)))
 
 
 def on_ui_tabs():
@@ -73,6 +78,10 @@ def on_ui_tabs():
                     value=0.35
                 )
 
+                exclude_tags = gr.Textbox(
+                    label='Exclude tags (split by comma)',
+                )
+
                 sort_by_alphabetical_order = gr.Checkbox(
                     label='Sort by alphabetical order')
                 add_confident_as_weight = gr.Checkbox(
@@ -110,19 +119,23 @@ def on_ui_tabs():
         def give_me_the_tags(
             image: Image,
             batch_input_glob: str, batch_input_recursive: bool, batch_output_dir: str, batch_output_type: str,
+
             threshold: float,
+            exclude_tags: str,
             sort_by_alphabetical_order: bool,
             add_confident_as_weight: bool,
             replace_underscore: bool,
             replace_underscore_excludes: str,
             escape_tag: bool
         ):
+
             postprocess_opts = (
                 threshold,
+                split_str(exclude_tags),
                 sort_by_alphabetical_order,
                 add_confident_as_weight,
                 replace_underscore,
-                map(str.strip, replace_underscore_excludes.split(',')),
+                split_str(replace_underscore_excludes),
                 escape_tag
             )
 
@@ -222,6 +235,7 @@ def on_ui_tabs():
 
                     # options
                     threshold,
+                    exclude_tags,
                     sort_by_alphabetical_order,
                     add_confident_as_weight,
                     replace_underscore,

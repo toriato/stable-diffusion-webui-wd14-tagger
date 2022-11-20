@@ -85,6 +85,7 @@ def postprocess_tags(
     tags: Dict[str, float],
 
     threshold=0.35,
+    exclude_tags: List[str] = [],
     sort_by_alphabetical_order=False,
     add_confident_as_weight=False,
     replace_underscore=False,
@@ -92,15 +93,21 @@ def postprocess_tags(
     escape_tag=False
 ) -> Dict[str, float]:
 
-    tags = {t: c for t, c in tags.items() if c >= threshold}
-
-    # sort by tag name or confident
+    # those lines are totally not "pythonic" but looks better to me
     tags = {
         t: c
+
+        # sort by tag name or confident
         for t, c in sorted(
             tags.items(),
             key=lambda i: i[0 if sort_by_alphabetical_order else 1],
             reverse=not sort_by_alphabetical_order
+        )
+
+        # filter tags
+        if (
+            c >= threshold
+            and t not in exclude_tags
         )
     }
 
