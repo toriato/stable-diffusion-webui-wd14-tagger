@@ -212,7 +212,7 @@ def on_ui_tabs():
                     if batch_output_type == 'JSON':
                         output_ext = 'json'
 
-                    output_path = Path(output_dir, f'{path}.{output_ext}')
+                    output_path = Path(output_dir, f'{str(path).rstrip(path.suffix)}.{output_ext}')
 
                     os.makedirs(output_dir, exist_ok=True)
 
