@@ -115,13 +115,13 @@ def postprocess_tags(
         new_tag = tag
 
         if replace_underscore and tag not in replace_underscore_excludes:
-            new_tag = tag.replace('_', ' ')
+            new_tag = new_tag.replace('_', ' ')
 
         if escape_tag:
-            new_tag = tag.replace(tag_escape_pattern, r'\\\1')
+            new_tag = tag_escape_pattern.sub(r'\\\1', new_tag)
 
         if add_confident_as_weight:
-            new_tag = f'({tag}:{tags[tag]})'
+            new_tag = f'({new_tag}:{tags[tag]})'
 
         if new_tag != tag:
             tags[new_tag] = tags.pop(tag)
