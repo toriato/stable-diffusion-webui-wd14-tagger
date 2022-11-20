@@ -156,9 +156,19 @@ def on_ui_tabs():
             batch_output_dir = batch_output_dir.strip()
 
             if batch_input_glob != '':
+                # if there is no glob pattern, insert it automatically
+                if not batch_input_glob.endswith('*'):
+                    if not batch_input_glob.endswith('/'):
+                        batch_input_glob += '/'
+                    batch_input_glob += '*'
+
                 # get root directory of input glob pattern
                 base_dir = batch_input_glob.replace('?', '*')
                 base_dir = base_dir.split('/*').pop(0)
+
+                # check the input directory path
+                if not os.path.isdir(base_dir):
+                    return ['', None, None, f'input path is not a directory']
 
                 # this line is moved here because some reason
                 # PIL.Image.registered_extensions() returns only PNG if you call too early
