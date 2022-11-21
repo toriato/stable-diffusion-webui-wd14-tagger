@@ -1,6 +1,6 @@
 Tagger for [Automatic1111's WebUI](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
 ---
-This is a extension version of Waifu Diffusion 1.4 tagger made by MrSmilingWolf.
+Interrogate booru style tags for single or multiple image files using various models, such as DeepDanbooru.
 
 ## Disclaimer
 I didn't make any models, and most of the code was heavily borrowed from the [DeepDanbooru](https://github.com/KichangKim/DeepDanbooru) and MrSmillingWolf's tagger.
@@ -17,6 +17,7 @@ I didn't make any models, and most of the code was heavily borrowed from the [De
       1. Various model files can be found below.
          - [DeepDanbooru models](https://github.com/KichangKim/DeepDanbooru/releases)
          - [e621 model by 🐾Zack🐾#1984](https://discord.gg/BDFpq9Yb7K)
+            *(link contains NSFW contents!)*
       1. Move the project folder containing the model and config to `models/deepdanbooru`
       1. The file structure should look like:
          ```
@@ -79,4 +80,4 @@ I didn't make any models, and most of the code was heavily borrowed from the [De
 
 ## Copyright
 
-Public domain, only for my parts
+Public domain, except borrowed parts (e.g. `dbimutils.py`)
