@@ -78,6 +78,8 @@ I didn't make any models, and most of the code was heavily borrowed from the [De
 ## Screenshot
 ![Screenshot](docs/screenshot.png)
 
+Artwork made by [hecattaart](https://vk.com/hecattaart?w=wall-89063929_3767)
+
 ## Copyright
 
 Public domain, except borrowed parts (e.g. `dbimutils.py`)
