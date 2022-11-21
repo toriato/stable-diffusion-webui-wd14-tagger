@@ -5,12 +5,12 @@ from typing import Dict, Callable, NamedTuple
 from pathlib import Path
 
 
-class FormatInfo(NamedTuple):
+class Info(NamedTuple):
     path: Path
     output_ext: str
 
 
-def hash(i: FormatInfo, algo='sha1') -> str:
+def hash(i: Info, algo='sha1') -> str:
     try:
         hash = hashlib.new(algo)
     except ImportError:
@@ -23,7 +23,7 @@ def hash(i: FormatInfo, algo='sha1') -> str:
     return hash.hexdigest()
 
 
-format_pattern = re.compile(r'\[([\w:]+)\]')
+pattern = re.compile(r'\[([\w:]+)\]')
 
 # all function must returns string or raise TypeError or ValueError
 # other errors will cause the extension error
@@ -36,7 +36,7 @@ available_formats: Dict[str, Callable] = {
 }
 
 
-def format(match: re.Match, info: FormatInfo) -> str:
+def format(match: re.Match, info: Info) -> str:
     matches = match[1].split(':')
     name, args = matches[0], matches[1:]
 

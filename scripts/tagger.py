@@ -2,17 +2,51 @@ import os
 import json
 import gradio as gr
 
-from typing import List
+from typing import List, Dict
 from pathlib import Path
 from glob import glob
 from PIL import Image, UnidentifiedImageError
 
 from webui import wrap_gradio_gpu_call
-from modules import shared, scripts, script_callbacks
+from modules import shared, scripts, script_callbacks, ui
 from modules import generation_parameters_copypaste as parameters_copypaste
 
-from tagger import interrogate_tags, postprocess_tags
-from format import FormatInfo, format_pattern, format
+from tagger import format
+from tagger.interrogator import Interrogator, DeepDanbooruInterrogator, WaifuDiffusionInterrogator
+
+interrogators: Dict[str, Interrogator] = {}
+
+script_dir = scripts.basedir()
+
+
+def refresh_interrogator() -> List[str]:
+    global interrogators
+    interrogators = {}
+
+    # load waifu diffusion 1.4 tagger models
+    # TODO: temporary code, should use shared.models_path later
+    if os.path.isdir(Path(script_dir, '2022_0000_0899_6549')):
+        interrogators['wd14'] = WaifuDiffusionInterrogator(
+            Path(script_dir, 'networks', 'ViTB16_11_03_2022_07h05m53s'),
+            Path(script_dir, '2022_0000_0899_6549', 'selected_tags.csv')
+        )
+
+    # load deepdanbooru project
+    os.makedirs(
+        shared.cmd_opts.deepdanbooru_projects_path,
+        exist_ok=True
+    )
+
+    for path in os.scandir(shared.cmd_opts.deepdanbooru_projects_path):
+        if not path.is_dir():
+            continue
+
+        if not Path(path, 'project.json').is_file():
+            continue
+
+        interrogators[path.name] = DeepDanbooruInterrogator(path)
+
+    return sorted(interrogators.keys())
 
 
 def split_str(s: str, separator=',') -> List[str]:
@@ -103,6 +137,20 @@ def on_ui_tabs():
 
                 # option components
                 # TODO: move to shared.opts?
+                with gr.Row(variant='compact'):
+                    interrogator = gr.Dropdown(
+                        label='Interrogator',
+                        choices=refresh_interrogator()
+                    )
+
+                    if shared.cmd_opts.administrator:
+                        ui.create_refresh_button(
+                            interrogator,
+                            lambda: None,
+                            lambda: {"choices": refresh_interrogator()},
+                            'refresh_interrogator'
+                        )
+
                 threshold = gr.Slider(
                     label='Threshold',
                     minimum=0,
@@ -119,7 +167,8 @@ def on_ui_tabs():
                 add_confident_as_weight = gr.Checkbox(
                     label='Include confident of tags matches in results')
                 replace_underscore = gr.Checkbox(
-                    label='Use spaces instead of underscore')
+                    label='Use spaces instead of underscore',
+                    value=True)
                 replace_underscore_excludes = gr.Textbox(
                     label='Excudes (split by comma)',
                     # kaomoji from WD 1.4 tagger csv. thanks, Meow-San#5400!
@@ -156,6 +205,7 @@ def on_ui_tabs():
             batch_output_type: str,
             batch_output_filename_format: str,
 
+            interrogator: str,
             threshold: float,
             exclude_tags: str,
             sort_by_alphabetical_order: bool,
@@ -164,6 +214,10 @@ def on_ui_tabs():
             replace_underscore_excludes: str,
             escape_tag: bool
         ):
+            if interrogator not in interrogators:
+                return ['', None, None, f"'{interrogator}' is not a valid interrogator"]
+
+            interrogator: Interrogator = interrogators[interrogator]
 
             postprocess_opts = (
                 threshold,
@@ -177,8 +231,11 @@ def on_ui_tabs():
 
             # single process
             if image is not None:
-                ratings, tags = interrogate_tags(image)
-                processed_tags = postprocess_tags(tags, *postprocess_opts)
+                ratings, tags = interrogator.interrogate(image)
+                processed_tags = Interrogator.postprocess_tags(
+                    tags,
+                    *postprocess_opts
+                )
 
                 return [
                     ', '.join(processed_tags),
@@ -231,12 +288,15 @@ def on_ui_tabs():
                         print(f'${path} is not supported image type')
                         continue
 
-                    ratings, tags = interrogate_tags(image)
-                    processed_tags = postprocess_tags(tags, *postprocess_opts)
+                    ratings, tags = interrogator.interrogate(image)
+                    processed_tags = Interrogator.postprocess_tags(
+                        tags,
+                        *postprocess_opts
+                    )
 
                     # TODO: switch for less print
                     print(
-                        f'found {len(processed_tags)} tags with {list(ratings.keys())[0]} rating from {path}'
+                        f'found {len(processed_tags)} tags out of {len(tags)} from {path}'
                     )
 
                     # guess the output path
@@ -250,11 +310,11 @@ def on_ui_tabs():
                         output_ext = 'json'
 
                     # format output filename
-                    format_info = FormatInfo(path, output_ext)
+                    format_info = format.Info(path, output_ext)
 
                     try:
-                        formatted_output_filename = format_pattern.sub(
-                            lambda m: format(m, format_info),
+                        formatted_output_filename = format.pattern.sub(
+                            lambda m: format.format(m, format_info),
                             batch_output_filename_format
                         )
                     except (TypeError, ValueError) as error:
@@ -296,6 +356,7 @@ def on_ui_tabs():
                     batch_output_filename_format,
 
                     # options
+                    interrogator,
                     threshold,
                     exclude_tags,
                     sort_by_alphabetical_order,
