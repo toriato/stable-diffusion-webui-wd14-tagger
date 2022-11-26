@@ -509,7 +509,7 @@ script_callbacks.on_ui_tabs(on_ui_tabs)
 
 class Script(scripts.Script):
     def title(self):
-        return "Waifu Diffusion 1.4 Tagger"
+        return "Tagger"
 
     def show(self, _):
         return scripts.AlwaysVisible
