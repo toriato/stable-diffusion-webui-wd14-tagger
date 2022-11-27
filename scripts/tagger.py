@@ -254,6 +254,11 @@ def on_ui_tabs():
                         value=0.35
                     )
 
+                    additional_tags = new(
+                        gr.Textbox,
+                        label='Additional tags (split by comma)'
+                    )
+
                     exclude_tags = new(
                         gr.Textbox,
                         label='Exclude tags (split by comma)'
@@ -332,6 +337,7 @@ def on_ui_tabs():
 
             interrogator: str,
             threshold: float,
+            additional_tags: str,
             exclude_tags: str,
             sort_by_alphabetical_order: bool,
             add_confident_as_weight: bool,
@@ -346,6 +352,7 @@ def on_ui_tabs():
 
             postprocess_opts = (
                 threshold,
+                split_str(additional_tags),
                 split_str(exclude_tags),
                 sort_by_alphabetical_order,
                 add_confident_as_weight,
@@ -483,6 +490,7 @@ def on_ui_tabs():
                     # options
                     interrogator,
                     threshold,
+                    additional_tags,
                     exclude_tags,
                     sort_by_alphabetical_order,
                     add_confident_as_weight,

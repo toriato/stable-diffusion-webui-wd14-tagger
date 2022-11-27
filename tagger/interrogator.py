@@ -40,6 +40,7 @@ class Interrogator:
         tags: Dict[str, float],
 
         threshold=0.35,
+        additional_tags: List[str] = [],
         exclude_tags: List[str] = [],
         sort_by_alphabetical_order=False,
         add_confident_as_weight=False,
@@ -47,6 +48,11 @@ class Interrogator:
         replace_underscore_excludes: List[str] = [],
         escape_tag=False
     ) -> Dict[str, float]:
+
+        tags = {
+            **{t: 1.0 for t in additional_tags},
+            **tags
+        }
 
         # those lines are totally not "pythonic" but looks better to me
         tags = {
