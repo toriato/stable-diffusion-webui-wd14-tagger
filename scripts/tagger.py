@@ -2,7 +2,7 @@ import os
 import json
 import gradio as gr
 
-from typing import Tuple, List, Dict
+from typing import List, Dict
 from pathlib import Path
 from glob import glob
 from PIL import Image, UnidentifiedImageError
@@ -10,81 +10,15 @@ from PIL import Image, UnidentifiedImageError
 from webui import wrap_gradio_gpu_call
 from modules import shared, scripts, script_callbacks, ui
 from modules import generation_parameters_copypaste as parameters_copypaste
-from modules.images import sanitize_filename_part
 
 from tagger import format
+from tagger.preset import Preset
 from tagger.interrogator import Interrogator, DeepDanbooruInterrogator, WaifuDiffusionInterrogator
 from tagger.utils import split_str
 
 script_dir = Path(scripts.basedir())
-preset_dir = script_dir.joinpath('presets')
-
+preset = Preset(script_dir.joinpath('presets'))
 interrogators: Dict[str, Interrogator] = {}
-
-option_components: List[object] = []
-
-
-def load_preset(filename: str) -> Tuple[str, Dict[str, Dict[str, any]]]:
-    if not filename.endswith('.json'):
-        filename += '.json'
-
-    path = preset_dir.joinpath(sanitize_filename_part(filename))
-    configs = {}
-
-    if path.is_file():
-        configs = json.loads(path.read_text())
-
-    return path, configs
-
-
-def save_preset(filename: str, *values) -> Tuple:
-    path, configs = load_preset(filename)
-
-    for index, component in enumerate(option_components):
-        config = configs.get(component.path, {})
-        config['value'] = values[index]
-
-        for attr in ['visible', 'min', 'max', 'step']:
-            if hasattr(component, attr):
-                config[attr] = config.get(attr, getattr(component, attr))
-
-        configs[component.path] = config
-
-    preset_dir.mkdir(0o777, True, True)
-    path.write_text(
-        json.dumps(configs, indent=4)
-    )
-
-    return 'successfully saved the preset'
-
-
-def apply_preset(filename: str) -> Tuple:
-    configs = load_preset(filename)[1]
-    outputs = []
-
-    for component in option_components:
-        config = configs.get(component.path, {})
-
-        if 'value' in config and hasattr(component, 'choices'):
-            if config['value'] not in component.choices:
-                config['value'] = None
-
-        outputs.append(component.update(**config))
-
-    return (*outputs, 'successfully loaded the preset')
-
-
-def refresh_presets() -> List[str]:
-    presets = [
-        p.name
-        for p in preset_dir.glob('*.json')
-        if p.is_file()
-    ]
-
-    if len(presets) < 1:
-        presets.append('default.json')
-
-    return presets
 
 
 def refresh_interrogators() -> List[str]:
@@ -133,20 +67,24 @@ def on_ui_tabs():
                         )
 
                     with gr.TabItem(label='Batch from directory'):
-                        batch_input_glob = gr.Textbox(
+                        batch_input_glob = preset.component(
+                            gr.Textbox,
                             label='Input directory',
                             placeholder='/path/to/images/* or /path/to/images/**/*'
                         )
-                        batch_input_recursive = gr.Checkbox(
+                        batch_input_recursive = preset.component(
+                            gr.Checkbox,
                             label='Use recursive with glob pattern'
                         )
 
-                        batch_output_dir = gr.Textbox(
+                        batch_output_dir = preset.component(
+                            gr.Textbox,
                             label='Output directory',
                             placeholder='Leave blank to save images to the same path.'
                         )
 
-                        batch_output_type = gr.Dropdown(
+                        batch_output_type = preset.component(
+                            gr.Dropdown,
                             label='Output type',
                             value='Flatfile',
                             choices=[
@@ -155,7 +93,8 @@ def on_ui_tabs():
                             ]
                         )
 
-                        batch_output_filename_format = gr.Textbox(
+                        batch_output_filename_format = preset.component(
+                            gr.Textbox,
                             label='Output filename format',
                             placeholder='Leave blank to use same filename as original.',
                             value='[name].[output_extension]'
@@ -195,116 +134,87 @@ def on_ui_tabs():
 
                 # preset selector
                 with gr.Row(variant='compact'):
-                    presets = refresh_presets()
-                    preset = gr.Dropdown(
+                    available_presets = preset.list()
+                    selected_preset = gr.Dropdown(
                         label='Preset',
-                        choices=presets,
-                        value=presets[0]
+                        choices=available_presets,
+                        value=available_presets[0]
                     )
 
-                    preset_save_button = gr.Button(
+                    save_preset_button = gr.Button(
                         value=ui.save_style_symbol
                     )
 
                     ui.create_refresh_button(
-                        preset,
+                        selected_preset,
                         lambda: None,
-                        lambda: {'choices': refresh_presets()},
+                        lambda: {'choices': preset.list()},
                         'refresh_preset'
                     )
 
                 # option components
-                # components in this block can be saved or loaded as presets
-                with gr.Blocks() as option_block:
-                    default_configs = load_preset('default.json')[1]
 
-                    # finds the config key from the label and makes the default kwargs
-                    def new(cls: object, **kwargs):
-                        return cls(**{
-                            **kwargs,
-                            **default_configs.get(f"/{kwargs.get('label')}", {})
-                        })
-
-                    # interrogator selector
-                    with gr.Row(variant='compact'):
-                        interrogator_names = refresh_interrogators()
-                        interrogator = new(
-                            gr.Dropdown,
-                            label='Interrogator',
-                            choices=interrogator_names,
-                            value=(
-                                None
-                                if len(interrogator_names) < 1 else
-                                interrogator_names[-1]
-                            )
+                # interrogator selector
+                with gr.Row(variant='compact'):
+                    interrogator_names = refresh_interrogators()
+                    interrogator = preset.component(
+                        gr.Dropdown,
+                        label='Interrogator',
+                        choices=interrogator_names,
+                        value=(
+                            None
+                            if len(interrogator_names) < 1 else
+                            interrogator_names[-1]
                         )
-
-                        ui.create_refresh_button(
-                            interrogator,
-                            lambda: None,
-                            lambda: {'choices': refresh_interrogators()},
-                            'refresh_interrogator'
-                        )
-
-                    threshold = new(
-                        gr.Slider,
-                        label='Threshold',
-                        minimum=0,
-                        maximum=1,
-                        value=0.35
                     )
 
-                    additional_tags = new(
-                        gr.Textbox,
-                        label='Additional tags (split by comma)'
+                    ui.create_refresh_button(
+                        interrogator,
+                        lambda: None,
+                        lambda: {'choices': refresh_interrogators()},
+                        'refresh_interrogator'
                     )
 
-                    exclude_tags = new(
-                        gr.Textbox,
-                        label='Exclude tags (split by comma)'
-                    )
-
-                    sort_by_alphabetical_order = new(
-                        gr.Checkbox,
-                        label='Sort by alphabetical order',
-                    )
-                    add_confident_as_weight = new(
-                        gr.Checkbox,
-                        label='Include confident of tags matches in results',
-                    )
-                    replace_underscore = new(
-                        gr.Checkbox,
-                        label='Use spaces instead of underscore',
-                        value=True
-                    )
-                    replace_underscore_excludes = new(
-                        gr.Textbox,
-                        label='Excudes (split by comma)',
-                        # kaomoji from WD 1.4 tagger csv. thanks, Meow-San#5400!
-                        value='0_0, (o)_(o), +_+, +_-, ._., <o>_<o>, <|>_<|>, =_=, >_<, 3_3, 6_9, >_o, @_@, ^_^, o_o, u_u, x_x, |_|, ||_||'
-                    )
-                    escape_tag = new(
-                        gr.Checkbox,
-                        label='Escape brackets',
-                    )
-
-                # list of components that can be set via preset
-                def on_visit(path, component):
-                    setattr(component, 'path', path)
-                    option_components.append(component)
-
-                ui.visit(option_block, on_visit)
-
-                preset.change(
-                    fn=apply_preset,
-                    inputs=[preset],
-                    outputs=[*option_components, info]
+                threshold = preset.component(
+                    gr.Slider,
+                    label='Threshold',
+                    minimum=0,
+                    maximum=1,
+                    value=0.35
                 )
 
-                preset_save_button.click(
-                    fn=save_preset,
-                    inputs=[preset, *option_components],  # values only
-                    outputs=[info]
+                additional_tags = preset.component(
+                    gr.Textbox,
+                    label='Additional tags (split by comma)'
+                )
+
+                exclude_tags = preset.component(
+                    gr.Textbox,
+                    label='Exclude tags (split by comma)'
+                )
+
+                sort_by_alphabetical_order = preset.component(
+                    gr.Checkbox,
+                    label='Sort by alphabetical order',
+                )
+                add_confident_as_weight = preset.component(
+                    gr.Checkbox,
+                    label='Include confident of tags matches in results',
+                )
+                replace_underscore = preset.component(
+                    gr.Checkbox,
+                    label='Use spaces instead of underscore',
+                    value=True
+                )
+                replace_underscore_excludes = preset.component(
+                    gr.Textbox,
+                    label='Excudes (split by comma)',
+                    # kaomoji from WD 1.4 tagger csv. thanks, Meow-San#5400!
+                    value='0_0, (o)_(o), +_+, +_-, ._., <o>_<o>, <|>_<|>, =_=, >_<, 3_3, 6_9, >_o, @_@, ^_^, o_o, u_u, x_x, |_|, ||_||'
+                )
+                escape_tag = preset.component(
+                    gr.Checkbox,
+                    label='Escape brackets',
                 )
 
             # output components
@@ -326,6 +236,18 @@ def on_ui_tabs():
 
                 rating_confidents = gr.Label(label='Rating confidents')
                 tag_confidents = gr.Label(label='Tag confidents')
+
+        selected_preset.change(
+            fn=preset.apply,
+            inputs=[selected_preset],
+            outputs=[*preset.components, info]
+        )
+
+        save_preset_button.click(
+            fn=preset.save,
+            inputs=[selected_preset, *preset.components],  # values only
+            outputs=[info]
+        )
 
         def give_me_the_tags(
             image: Image,
@@ -513,11 +435,3 @@ def on_ui_tabs():
 
 
 script_callbacks.on_ui_tabs(on_ui_tabs)
-
-
-class Script(scripts.Script):
-    def title(self):
-        return "Tagger"
-
-    def show(self, _):
-        return scripts.AlwaysVisible
