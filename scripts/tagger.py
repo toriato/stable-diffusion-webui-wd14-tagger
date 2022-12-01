@@ -70,7 +70,7 @@ def on_ui_tabs():
                         batch_input_glob = preset.component(
                             gr.Textbox,
                             label='Input directory',
-                            placeholder='/path/to/images/* or /path/to/images/**/*'
+                            placeholder='/path/to/images or /path/to/images/**/*'
                         )
                         batch_input_recursive = preset.component(
                             gr.Checkbox,
@@ -81,16 +81,6 @@ def on_ui_tabs():
                             gr.Textbox,
                             label='Output directory',
                             placeholder='Leave blank to save images to the same path.'
-                        )
-
-                        batch_output_type = preset.component(
-                            gr.Dropdown,
-                            label='Output type',
-                            value='Flatfile',
-                            choices=[
-                                'Flatfile',
-                                'JSON'
-                            ]
                         )
 
                         batch_output_filename_format = preset.component(
@@ -124,6 +114,23 @@ def on_ui_tabs():
                                 `[hash:sha1].[output_extension]`
                                 '''
                             )
+
+                        batch_output_action_on_conflict = preset.component(
+                            gr.Dropdown,
+                            label='Action on exiting caption',
+                            value='ignore',
+                            choices=[
+                                'ignore',
+                                'copy',
+                                'append',
+                                'prepend'
+                            ]
+                        )
+
+                        batch_output_save_json = preset.component(
+                            gr.Checkbox,
+                            label='Save with JSON'
+                        )
 
                 submit = gr.Button(
                     value='Interrogate',
@@ -254,8 +261,9 @@ def on_ui_tabs():
             batch_input_glob: str,
             batch_input_recursive: bool,
             batch_output_dir: str,
-            batch_output_type: str,
             batch_output_filename_format: str,
+            batch_output_action_on_conflict: str,
+            batch_output_save_json: bool,
 
             interrogator: str,
             threshold: float,
@@ -342,6 +350,38 @@ def on_ui_tabs():
                         print(f'${path} is not supported image type')
                         continue
 
+                    # guess the output path
+                    output_dir = Path(
+                        base_dir if batch_output_dir == '' else batch_output_dir,
+                        os.path.dirname(str(path).removeprefix(base_dir + '/'))
+                    )
+
+                    output_dir.mkdir(0o777, True, True)
+
+                    # format output filename
+                    format_info = format.Info(path, 'txt')
+
+                    try:
+                        formatted_output_filename = format.pattern.sub(
+                            lambda m: format.format(m, format_info),
+                            batch_output_filename_format
+                        )
+                    except (TypeError, ValueError) as error:
+                        return ['', None, None, str(error)]
+
+                    output_path = output_dir.joinpath(
+                        formatted_output_filename
+                    )
+
+                    output = []
+
+                    if output_path.is_file():
+                        output.append(output_path.read_text())
+
+                        if batch_output_action_on_conflict == 'ignore':
+                            print(f'skipping {path}')
+                            continue
+
                     ratings, tags = interrogator.interrogate(image)
                     processed_tags = Interrogator.postprocess_tags(
                         tags,
@@ -353,42 +393,21 @@ def on_ui_tabs():
                         f'found {len(processed_tags)} tags out of {len(tags)} from {path}'
                     )
 
-                    # guess the output path
-                    output_dir = Path(
-                        base_dir if batch_output_dir == '' else batch_output_dir,
-                        os.path.dirname(str(path).removeprefix(base_dir + '/'))
-                    )
+                    plain_tags = ', '.join(processed_tags)
 
-                    output_ext = 'txt'
-                    if batch_output_type == 'JSON':
-                        output_ext = 'json'
-
-                    # format output filename
-                    format_info = format.Info(path, output_ext)
-
-                    try:
-                        formatted_output_filename = format.pattern.sub(
-                            lambda m: format.format(m, format_info),
-                            batch_output_filename_format
-                        )
-                    except (TypeError, ValueError) as error:
-                        return ['', None, None, str(error)]
-
-                    output_path = Path(
-                        output_dir,
-                        formatted_output_filename
-                    )
-
-                    os.makedirs(output_dir, exist_ok=True)
-
-                    # save output
-                    if batch_output_type == 'JSON':
-                        output = json.dumps((ratings, tags))
+                    if batch_output_action_on_conflict == 'copy':
+                        output = [plain_tags]
+                    elif batch_output_action_on_conflict == 'prepend':
+                        output.insert(0, plain_tags)
                     else:
-                        output = ', '.join(processed_tags)
+                        output.append(plain_tags)
 
-                    with output_path.open('w') as f:
-                        f.write(output)
+                    output_path.write_text(' '.join(output))
+
+                    if batch_output_save_json:
+                        output_path.with_suffix('.json').write_text(
+                            json.dumps([ratings, tags])
+                        )
 
                 print('all done :)')
 
@@ -406,8 +425,9 @@ def on_ui_tabs():
                     batch_input_glob,
                     batch_input_recursive,
                     batch_output_dir,
-                    batch_output_type,
                     batch_output_filename_format,
+                    batch_output_action_on_conflict,
+                    batch_output_save_json,
 
                     # options
                     interrogator,
