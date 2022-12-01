@@ -20,6 +20,10 @@ script_dir = Path(scripts.basedir())
 preset = Preset(script_dir.joinpath('presets'))
 interrogators: Dict[str, Interrogator] = {}
 
+# if you do not initialize the Image object
+# Image.registered_extensions() returns only PNG
+Image.init()
+
 
 def refresh_interrogators() -> List[str]:
     global interrogators
