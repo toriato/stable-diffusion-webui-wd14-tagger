@@ -30,12 +30,7 @@ def refresh_interrogators() -> List[str]:
     interrogators = {}
 
     # load waifu diffusion 1.4 tagger models
-    # TODO: temporary code, should use shared.models_path later
-    if os.path.isdir(Path(script_dir, '2022_0000_0899_6549')):
-        interrogators['wd14'] = WaifuDiffusionInterrogator(
-            Path(script_dir, 'networks', 'ViTB16_11_03_2022_07h05m53s'),
-            Path(script_dir, '2022_0000_0899_6549', 'selected_tags.csv')
-        )
+    interrogators['wd14'] = WaifuDiffusionInterrogator()
 
     # load deepdanbooru project
     os.makedirs(

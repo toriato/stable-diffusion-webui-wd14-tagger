@@ -8,6 +8,9 @@ from typing import Tuple, List, Dict
 from io import BytesIO
 from PIL import Image
 
+from pathlib import Path
+from huggingface_hub import hf_hub_download
+
 from modules import shared
 from modules.deepbooru import re_special as tag_escape_pattern
 
@@ -161,16 +164,38 @@ class DeepDanbooruInterrogator(Interrogator):
 
 
 class WaifuDiffusionInterrogator(Interrogator):
-    def __init__(self, model_path: os.PathLike, tags_path: os.PathLike) -> None:
-        print(f'Loading Waifu Diffusion tagger model from {str(model_path)}')
+    def __init__(self) -> None:
+        self.model = None
 
+    def download(self) -> Tuple[os.PathLike, os.PathLike]:
+        repo = "SmilingWolf/wd-v1-4-vit-tagger"
+        model_files = [
+            {"filename": "saved_model.pb", "subfolder": ""},
+            {"filename": "keras_metadata.pb", "subfolder": ""},
+            {"filename": "variables.index", "subfolder": "variables"},
+            {"filename": "variables.data-00000-of-00001", "subfolder": "variables"},
+        ]
+
+        print(f'Downloading Waifu Diffusion tagger model files from {repo}')
+        model_file_paths = []
+        for elem in model_files:
+            model_file_paths.append(Path(hf_hub_download(repo, **elem)))
+
+        model_path = model_file_paths[0].parents[0]
+        tags_path = Path(hf_hub_download(repo, filename="selected_tags.csv"))
+        return model_path, tags_path
+
+    def load(self) -> None:
+        model_path, tags_path = self.download()
+
+        print(f'Loading Waifu Diffusion tagger model from {str(model_path)}')
         with tf.device(device_name):
             self.model = tf.keras.models.load_model(
                 model_path,
                 compile=False
             )
 
-            self.tags = pd.read_csv(tags_path)
+        self.tags = pd.read_csv(tags_path)
 
     def interrogate(
         self,
@@ -187,6 +212,10 @@ class WaifuDiffusionInterrogator(Interrogator):
         image = dbimutils.smart_resize(image, 448)
         image = image.astype(np.float32)
         image = np.expand_dims(image, 0)
+
+        # init model
+        if self.model is None:
+            self.load()
 
         # evaluate model
         confidents = self.model(image, training=False)
