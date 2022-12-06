@@ -15,6 +15,11 @@ I didn't make any models, and most of the code was heavily borrowed from the [De
       ```
 
 1. Add interrogate model
+   - #### *MrSmilingWolf's model (a.k.a. Waifu Diffusion 1.4 tagger)*
+      Downloads automatically from the [HuggingFace repository](https://huggingface.co/SmilingWolf/wd-v1-4-vit-tagger) the first time you run it.
+
+      Please ask the original author MrSmilingWolf#5991 for questions related to model or additional training.
+
    - #### *DeepDanbooru*
       1. Various model files can be found below.
          - [DeepDanbooru models](https://github.com/KichangKim/DeepDanbooru/releases)
@@ -41,9 +46,6 @@ I didn't make any models, and most of the code was heavily borrowed from the [De
            │
            ...
          ```
-
-   - #### *MrSmilingWolf's model (a.k.a. Waifu Diffusion 1.4 tagger)*
-      Please ask the original author MrSmilingWolf#5991 for questions related to model or additional training.
 
 1. Start or restart the WebUI.
    - or you can press refresh button after *Interrogator* dropdown box.

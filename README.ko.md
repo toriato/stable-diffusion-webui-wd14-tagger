@@ -15,6 +15,11 @@ DeepDanbooru 와 같은 모델을 통해 단일 또는 여러 이미지로부터
       ```
 
 1. 모델 추가하기
+   - #### *MrSmilingWolf's model (a.k.a. Waifu Diffusion 1.4 tagger)*
+      처음 실행할 때 [HuggingFace 레포지토리](https://huggingface.co/SmilingWolf/wd-v1-4-vit-tagger)로부터 자동으로 받아옵니다.
+
+      모델과 관련된 또는 추가 학습에 대한 질문은 원작자인 MrSmilingWolf#5991 으로 물어봐주세요.
+
    - #### *DeepDanbooru*
       1. 다양한 모델 파일은 아래 주소에서 찾을 수 있습니다.
          - [DeepDanbooru model](https://github.com/KichangKim/DeepDanbooru/releases)
@@ -41,40 +46,7 @@ DeepDanbooru 와 같은 모델을 통해 단일 또는 여러 이미지로부터
            │
            ...
          ```
-    
-   - #### *MrSmilingWolf's model (a.k.a. Waifu Diffusion 1.4 tagger)*
-      모델과 추가 학습에 관해선 원작자인 MrSmilingWolf#5991 에게 문의해주세요.
-      
-      MrSmilingWolf 의 말:
 
-      > Based on validation score I'd say this is pretty much production grade.
-      >
-      > I've launched a longer training run (50 epochs, ETA: 9 days), mainly to check how much more can be squeezed out of it, but I'm fairly confident this can be plugged into a real inference pipeline already.
-      >
-      > I'm also finetuning the ConvNext network, but so far ViT has always coped better with less popular classes, so I'm edging my bets on this one.
-      OTOH, ensembling seems to give a decent boost in validation metrics, so if we ever want to do that, I'll be ready."
-      1. 압축된 모델 파일을 받습니다.
-         1. [SD Training Labs](https://discord.gg/zUDeSwMf2k) 디스코드 서버에 참가합니다
-         1. [이 메세지](https://discord.com/channels/1038249716149928046/1038249717001359402/1041160494150594671)에서 mega.nz 주소를 찾을 수 있습니다
-
-      1. 클론된 레포지토리 속에 압축을 해제합니다.
-
-      1. 파일 구조는 다음과 같습니다:
-         ```
-         extensions/
-         └╴wd14-tagger/
-           ├╴2022_0000_0899_6549/
-           │ └╴selected_tags.csv
-           │
-           ├╴networks/
-           │ └╴ViTB16_11_03_2022_07h05m53s/
-           │   └╴ ...
-           │
-           ├╴scripts/
-           │ └╴tagger.py
-           │
-           ...
-         ```
 1. 웹UI 를 시작하거나 재시작합니다.
    - 또는 *Interrogator* 드롭다운 상자 우측에 있는 새로고침 버튼을 누릅니다.
 
