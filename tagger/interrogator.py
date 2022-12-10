@@ -1,4 +1,5 @@
 import os
+import torch
 import tensorflow as tf
 import pandas as pd
 import numpy as np
@@ -23,8 +24,10 @@ from . import dbimutils
 for device in tf.config.experimental.list_physical_devices('GPU'):
     tf.config.experimental.set_memory_growth(device, True)
 
+use_cpu = shared.cmd_opts.use_cpu == 'all' or shared.cmd_opts.use_cpu == 'interrogate'
+
 # select a device to process
-if shared.cmd_opts.use_cpu == 'all' or shared.cmd_opts.use_cpu == 'interrogate':
+if use_cpu:
     device_name = '/cpu:0'  # 0 by default?
 else:
     device_name = '/gpu:0'  # 0 by default?
@@ -171,36 +174,50 @@ class DeepDanbooruInterrogator(Interrogator):
 
 
 class WaifuDiffusionInterrogator(Interrogator):
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        repo='SmilingWolf/wd-v1-4-vit-tagger',
+        model_path='model.onnx',
+        tags_path='selected_tags.csv'
+    ) -> None:
         self.model = None
 
+        self.repo = repo
+        self.model_path = model_path
+        self.tags_path = tags_path
+
     def download(self) -> Tuple[os.PathLike, os.PathLike]:
-        repo = 'SmilingWolf/wd-v1-4-vit-tagger'
-        model_files = [
-            {'filename': 'saved_model.pb', 'subfolder': ''},
-            {'filename': 'keras_metadata.pb', 'subfolder': ''},
-            {'filename': 'variables.index', 'subfolder': 'variables'},
-            {'filename': 'variables.data-00000-of-00001', 'subfolder': 'variables'},
-        ]
+        print(f'Loading Waifu Diffusion tagger model file from {self.repo}')
 
-        print(f'Downloading Waifu Diffusion tagger model files from {repo}')
-        model_file_paths = []
-        for elem in model_files:
-            model_file_paths.append(Path(hf_hub_download(repo, **elem)))
-
-        model_path = model_file_paths[0].parents[0]
-        tags_path = Path(hf_hub_download(repo, filename='selected_tags.csv'))
+        model_path = Path(hf_hub_download(self.repo, filename=self.model_path))
+        tags_path = Path(hf_hub_download(self.repo, filename=self.tags_path))
         return model_path, tags_path
 
     def load(self) -> None:
         model_path, tags_path = self.download()
 
-        print(f'Loading Waifu Diffusion tagger model from {str(model_path)}')
-        with tf.device(device_name):
-            self.model = tf.keras.models.load_model(
-                model_path,
-                compile=False
+        # only one of these packages should be installed at a time in any one environment
+        # https://onnxruntime.ai/docs/get-started/with-python.html#install-onnx-runtime
+        # TODO: remove old package when the environment changes?
+        from launch import is_installed, run_pip
+        if not is_installed('onnxruntime'):
+            package_name = 'onnxruntime-gpu'
+
+            if use_cpu or not torch.cuda.is_available():
+                package_name = 'onnxruntime'
+
+            package = os.environ.get(
+                'ONNXRUNTIME_PACKAGE',
+                package_name
             )
+
+            run_pip(f'install {package}', package_name)
+
+        from onnxruntime import InferenceSession
+
+        self.model = InferenceSession(str(model_path))
+
+        print(f'Loaded Waifu Diffusion tagger model from {model_path}')
 
         self.tags = pd.read_csv(tags_path)
 
@@ -211,21 +228,36 @@ class WaifuDiffusionInterrogator(Interrogator):
         Dict[str, float],  # rating confidents
         Dict[str, float]  # tag confidents
     ]:
-        # convert an image to fit the model
-        image.convert('RGB')
-        image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-        image = dbimutils.smart_24bit(image)
-        image = dbimutils.make_square(image, 448)
-        image = dbimutils.smart_resize(image, 448)
-        image = image.astype(np.float32)
-        image = np.expand_dims(image, 0)
-
         # init model
         if self.model is None:
             self.load()
 
+        # code for converting the image and running the model is taken from the link below
+        # thanks, SmilingWolf!
+        # https://huggingface.co/spaces/SmilingWolf/wd-v1-4-tags/blob/main/app.py
+
+        # convert an image to fit the model
+        _, height, _, _ = self.model.get_inputs()[0].shape
+
+        # alpha to white
+        image = image.convert('RGBA')
+        new_image = Image.new('RGBA', image.size, 'WHITE')
+        new_image.paste(image, mask=image)
+        image = new_image.convert('RGB')
+        image = np.asarray(image)
+
+        # PIL RGB to OpenCV BGR
+        image = image[:, :, ::-1]
+
+        image = dbimutils.make_square(image, height)
+        image = dbimutils.smart_resize(image, height)
+        image = image.astype(np.float32)
+        image = np.expand_dims(image, 0)
+
         # evaluate model
-        confidents = self.model(image, training=False)
+        input_name = self.model.get_inputs()[0].name
+        label_name = self.model.get_outputs()[0].name
+        confidents = self.model.run([label_name], {input_name: image})[0]
 
         tags = self.tags[:][['name']]
         tags['confidents'] = confidents[0]
