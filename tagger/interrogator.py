@@ -201,21 +201,22 @@ class WaifuDiffusionInterrogator(Interrogator):
         # TODO: remove old package when the environment changes?
         from launch import is_installed, run_pip
         if not is_installed('onnxruntime'):
-            package_name = 'onnxruntime-gpu'
-
-            if use_cpu or not torch.cuda.is_available():
-                package_name = 'onnxruntime'
-
             package = os.environ.get(
                 'ONNXRUNTIME_PACKAGE',
-                package_name
+                'onnxruntime-gpu'
             )
 
-            run_pip(f'install {package}', package_name)
+            run_pip(f'install {package}', 'onnxruntime')
 
         from onnxruntime import InferenceSession
 
-        self.model = InferenceSession(str(model_path))
+        # https://onnxruntime.ai/docs/execution-providers/
+        # https://github.com/toriato/stable-diffusion-webui-wd14-tagger/commit/e4ec460122cf674bbf984df30cdb10b4370c1224#r92654958
+        providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+        if use_cpu:
+            providers.pop(0)
+
+        self.model = InferenceSession(str(model_path), providers=providers)
 
         print(f'Loaded Waifu Diffusion tagger model from {model_path}')
 
