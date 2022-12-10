@@ -168,12 +168,12 @@ class WaifuDiffusionInterrogator(Interrogator):
         self.model = None
 
     def download(self) -> Tuple[os.PathLike, os.PathLike]:
-        repo = "SmilingWolf/wd-v1-4-vit-tagger"
+        repo = 'SmilingWolf/wd-v1-4-vit-tagger'
         model_files = [
-            {"filename": "saved_model.pb", "subfolder": ""},
-            {"filename": "keras_metadata.pb", "subfolder": ""},
-            {"filename": "variables.index", "subfolder": "variables"},
-            {"filename": "variables.data-00000-of-00001", "subfolder": "variables"},
+            {'filename': 'saved_model.pb', 'subfolder': ''},
+            {'filename': 'keras_metadata.pb', 'subfolder': ''},
+            {'filename': 'variables.index', 'subfolder': 'variables'},
+            {'filename': 'variables.data-00000-of-00001', 'subfolder': 'variables'},
         ]
 
         print(f'Downloading Waifu Diffusion tagger model files from {repo}')
@@ -182,7 +182,7 @@ class WaifuDiffusionInterrogator(Interrogator):
             model_file_paths.append(Path(hf_hub_download(repo, **elem)))
 
         model_path = model_file_paths[0].parents[0]
-        tags_path = Path(hf_hub_download(repo, filename="selected_tags.csv"))
+        tags_path = Path(hf_hub_download(repo, filename='selected_tags.csv'))
         return model_path, tags_path
 
     def load(self) -> None:
