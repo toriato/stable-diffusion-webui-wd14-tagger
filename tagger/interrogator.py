@@ -1,9 +1,7 @@
 import os
 import torch
-import tensorflow as tf
 import pandas as pd
 import numpy as np
-import cv2
 
 from typing import Tuple, List, Dict
 from io import BytesIO
@@ -18,23 +16,17 @@ from modules.deepbooru import re_special as tag_escape_pattern
 # i'm not sure if it's okay to add this file to the repository
 from . import dbimutils
 
-# tensorflow maps nearly all vram by default, so we limit this
-# https://www.tensorflow.org/guide/gpu#limiting_gpu_memory_growth
-# TODO: is safe to set set_memory_growth...?
-for device in tf.config.experimental.list_physical_devices('GPU'):
-    tf.config.experimental.set_memory_growth(device, True)
-
+# select a device to process
 use_cpu = shared.cmd_opts.use_cpu == 'all' or shared.cmd_opts.use_cpu == 'interrogate'
 
-# select a device to process
 if use_cpu:
-    device_name = '/cpu:0'  # 0 by default?
+    tf_device_name = '/cpu:0'
 else:
-    device_name = '/gpu:0'  # 0 by default?
+    tf_device_name = '/gpu:0'
 
     if shared.cmd_opts.device_id is not None:
         try:
-            device_name = f'/gpu:{int(shared.cmd_opts.device_id)}'
+            tf_device_name = f'/gpu:{int(shared.cmd_opts.device_id)}'
         except ValueError:
             print('--device-id is not a integer')
 
@@ -114,7 +106,6 @@ class DeepDanbooruInterrogator(Interrogator):
 
         # deepdanbooru package is not include in web-sd anymore
         # https://github.com/AUTOMATIC1111/stable-diffusion-webui/commit/c81d440d876dfd2ab3560410f37442ef56fc663
-        # TODO: is it okay to install a pip package here?
         from launch import is_installed, run_pip
         if not is_installed('deepdanbooru'):
             package = os.environ.get(
@@ -122,9 +113,18 @@ class DeepDanbooruInterrogator(Interrogator):
                 'git+https://github.com/KichangKim/DeepDanbooru.git@d91a2963bf87c6a770d74894667e9ffa9f6de7ff'
             )
 
-            run_pip(f'install {package} tensorflow-io', 'deepdanbooru')
+            run_pip(
+                f'install {package} tensorflow tensorflow-io', 'deepdanbooru')
 
-        with tf.device(device_name):
+        import tensorflow as tf
+
+        # tensorflow maps nearly all vram by default, so we limit this
+        # https://www.tensorflow.org/guide/gpu#limiting_gpu_memory_growth
+        # TODO: only run on the first run
+        for device in tf.config.experimental.list_physical_devices('GPU'):
+            tf.config.experimental.set_memory_growth(device, True)
+
+        with tf.device(tf_device_name):
             import deepdanbooru.project as ddp
 
             self.model = ddp.load_model_from_project(
