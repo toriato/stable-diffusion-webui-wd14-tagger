@@ -23,8 +23,7 @@ from . import dbimutils
 for device in tf.config.experimental.list_physical_devices('GPU'):
     tf.config.experimental.set_memory_growth(device, True)
 
-# load model into gpu or cpu
-# TODO: does this even work??
+# select a device to process
 if shared.cmd_opts.use_cpu == 'all' or shared.cmd_opts.use_cpu == 'interrogate':
     device_name = '/cpu:0'  # 0 by default?
 else:
@@ -104,7 +103,11 @@ class Interrogator:
 
 class DeepDanbooruInterrogator(Interrogator):
     def __init__(self,  project_path: os.PathLike) -> None:
-        print(f'Loading DeepDanbooru project from {str(project_path)}')
+        self.model = None
+        self.project_path = project_path
+
+    def load(self) -> None:
+        print(f'Loading DeepDanbooru project from {str(self.project_path)}')
 
         # deepdanbooru package is not include in web-sd anymore
         # https://github.com/AUTOMATIC1111/stable-diffusion-webui/commit/c81d440d876dfd2ab3560410f37442ef56fc663
@@ -122,12 +125,12 @@ class DeepDanbooruInterrogator(Interrogator):
             import deepdanbooru.project as ddp
 
             self.model = ddp.load_model_from_project(
-                project_path=project_path,
+                project_path=self.project_path,
                 compile_model=False
             )
 
             self.tags = ddp.load_tags_from_project(
-                project_path=project_path
+                project_path=self.project_path
             )
 
     def interrogate(
@@ -137,11 +140,15 @@ class DeepDanbooruInterrogator(Interrogator):
         Dict[str, float],  # rating confidents
         Dict[str, float]  # tag confidents
     ]:
+        # init model
+        if self.model is None:
+            self.load()
+
         import deepdanbooru.data as ddd
 
+        # convert an image to fit the model
         image_bufs = BytesIO()
         image.save(image_bufs, format='PNG')
-
         image = ddd.load_image_for_evaluate(
             image_bufs,
             self.model.input_shape[2],
@@ -204,7 +211,7 @@ class WaifuDiffusionInterrogator(Interrogator):
         Dict[str, float],  # rating confidents
         Dict[str, float]  # tag confidents
     ]:
-        # converting the match the image used for learning (448x448)
+        # convert an image to fit the model
         image.convert('RGB')
         image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
         image = dbimutils.smart_24bit(image)
