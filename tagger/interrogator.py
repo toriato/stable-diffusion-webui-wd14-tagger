@@ -17,7 +17,7 @@ from modules.deepbooru import re_special as tag_escape_pattern
 from . import dbimutils
 
 # select a device to process
-use_cpu = shared.cmd_opts.use_cpu == 'all' or shared.cmd_opts.use_cpu == 'interrogate'
+use_cpu = ('all' in shared.cmd_opts.use_cpu) or ('interrogate' in shared.cmd_opts.use_cpu)
 
 if use_cpu:
     tf_device_name = '/cpu:0'
