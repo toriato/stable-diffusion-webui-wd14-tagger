@@ -191,12 +191,14 @@ def on_ui_tabs():
 
                 additional_tags = preset.component(
                     gr.Textbox,
-                    label='Additional tags (split by comma)'
+                    label='Additional tags (split by comma)',
+                    elem_id='additioanl-tags'
                 )
 
                 exclude_tags = preset.component(
                     gr.Textbox,
-                    label='Exclude tags (split by comma)'
+                    label='Exclude tags (split by comma)',
+                    elem_id='exclude-tags'
                 )
 
                 sort_by_alphabetical_order = preset.component(
@@ -205,7 +207,7 @@ def on_ui_tabs():
                 )
                 add_confident_as_weight = preset.component(
                     gr.Checkbox,
-                    label='Include confident of tags matches in results',
+                    label='Include confident of tags matches in results'
                 )
                 replace_underscore = preset.component(
                     gr.Checkbox,
@@ -240,8 +242,14 @@ def on_ui_tabs():
                         tags
                     )
 
-                rating_confidents = gr.Label(label='Rating confidents')
-                tag_confidents = gr.Label(label='Tag confidents')
+                rating_confidents = gr.Label(
+                    label='Rating confidents',
+                    elem_id='rating-confidents'
+                )
+                tag_confidents = gr.Label(
+                    label='Tag confidents',
+                    elem_id='tag-confidents'
+                )
 
         selected_preset.change(
             fn=preset.apply,
