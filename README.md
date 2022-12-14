@@ -25,7 +25,7 @@ I didn't make any models, and most of the code was heavily borrowed from the [De
 
       > This particular model was trained later and might actually be slightly better than the ViT one. Difference is in the noise range tho 
 
-      — [SmilingWolf](https://github.com/SmilingWolf) from [this thread](https://discord.com/channels/930499730843250783/1052283314997837955) in the [東方Project server](https://discord.com/invite/touhouai) 
+      — [SmilingWolf](https://github.com/SmilingWolf) from [this thread](https://discord.com/channels/930499730843250783/1052283314997837955) in the [東方Project AI server](https://discord.com/invite/touhouai) 
 
    - #### *DeepDanbooru*
       1. Various model files can be found below.
