@@ -30,7 +30,10 @@ def refresh_interrogators() -> List[str]:
     interrogators = {}
 
     # load waifu diffusion 1.4 tagger models
-    interrogators['wd14'] = WaifuDiffusionInterrogator()
+    interrogators['wd14-vit'] = WaifuDiffusionInterrogator()
+    interrogators['wd14-convnext'] = WaifuDiffusionInterrogator(
+        repo='SmilingWolf/wd-v1-4-convnext-tagger'
+    )
 
     # load deepdanbooru project
     os.makedirs(

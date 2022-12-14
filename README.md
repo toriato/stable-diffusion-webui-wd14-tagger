@@ -20,6 +20,13 @@ I didn't make any models, and most of the code was heavily borrowed from the [De
 
       Please ask the original author MrSmilingWolf#5991 for questions related to model or additional training.
 
+      ##### ViT vs Convnext
+      > To make it clear: the ViT model is the one used to tag images for WD 1.4. That's why the repo was originally called like that. This one has been trained on the same data and tags, but has got no other relation to WD 1.4, aside from stemming from the same coordination effort. They were trained in parallel, and the best one at the time was selected for WD 1.4
+
+      > This particular model was trained later and might actually be slightly better than the ViT one. Difference is in the noise range tho 
+
+      — [SmilingWolf](https://github.com/SmilingWolf) from [this thread](https://discord.com/channels/930499730843250783/1052283314997837955) in the [東方Project server](https://discord.com/invite/touhouai) 
+
    - #### *DeepDanbooru*
       1. Various model files can be found below.
          - [DeepDanbooru models](https://github.com/KichangKim/DeepDanbooru/releases)
