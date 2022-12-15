@@ -361,10 +361,10 @@ def on_ui_tabs():
                         continue
 
                     # guess the output path
-                    output_dir = Path(
-                        base_dir if batch_output_dir == '' else batch_output_dir,
-                        os.path.dirname(str(path).removeprefix(base_dir + '/'))
-                    )
+                    base_dir_last = Path(base_dir).parts[-1]
+                    base_dir_last_idx = path.parts.index(base_dir_last)
+                    output_dir = Path(batch_output_dir) if batch_output_dir else Path(base_dir)
+                    output_dir = output_dir.joinpath(*path.parts[base_dir_last_idx + 1:]).parent
 
                     output_dir.mkdir(0o777, True, True)
 
