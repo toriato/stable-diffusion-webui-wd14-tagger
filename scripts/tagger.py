@@ -5,7 +5,7 @@ import gradio as gr
 from typing import List, Dict
 from pathlib import Path
 from glob import glob
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageFile, UnidentifiedImageError
 
 from webui import wrap_gradio_gpu_call
 from modules import shared, scripts, script_callbacks, ui
@@ -23,6 +23,10 @@ interrogators: Dict[str, Interrogator] = {}
 # if you do not initialize the Image object
 # Image.registered_extensions() returns only PNG
 Image.init()
+
+# PIL spits errors when loading a truncated image by default
+# https://pillow.readthedocs.io/en/stable/reference/ImageFile.html#PIL.ImageFile.LOAD_TRUNCATED_IMAGES
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 def refresh_interrogators() -> List[str]:
