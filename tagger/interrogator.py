@@ -94,24 +94,17 @@ class Interrogator:
         raise NotImplementedError()
 
     def unload(self) -> bool:
-        # unloaded = False
+        unloaded = False
 
-        # if hasattr(self, 'model') and self.model is not None:
-        #     del self.model
-        #     unloaded = True
-        #     print(f'Unloaded {self.name}')
+        if hasattr(self, 'model') and self.model is not None:
+            del self.model
+            unloaded = True
+            print(f'Unloaded {self.name}')
 
-        # if hasattr(self, 'tags'):
-        #     del self.tags
+        if hasattr(self, 'tags'):
+            del self.tags
 
-        # return unloaded
-
-        # There is a bug in Keras where it is not possible to release a model that has been loaded into memory.
-        # Downgrading to keras==2.1.6 may solve the issue, but it may cause compatibility issues with other packages.
-        # Using subprocess to create a new process may also solve the problem, but it can be too complex (like Automatic1111 did).
-        # It seems that for now, the best option is to keep the model in memory, as most users use the Waifu Diffusion model with onnx.
-
-        return False
+        return unloaded
 
     def interrogate(
         self,
@@ -166,16 +159,23 @@ class DeepDanbooruInterrogator(Interrogator):
             )
 
     def unload(self) -> bool:
-        unloaded = super().unload()
+        # unloaded = super().unload()
 
-        if unloaded:
-            # tensorflow suck
-            # https://github.com/keras-team/keras/issues/2102
-            import tensorflow as tf
-            tf.keras.backend.clear_session()
-            gc.collect()
+        # if unloaded:
+        #     # tensorflow suck
+        #     # https://github.com/keras-team/keras/issues/2102
+        #     import tensorflow as tf
+        #     tf.keras.backend.clear_session()
+        #     gc.collect()
 
-        return unloaded
+        # return unloaded
+
+        # There is a bug in Keras where it is not possible to release a model that has been loaded into memory.
+        # Downgrading to keras==2.1.6 may solve the issue, but it may cause compatibility issues with other packages.
+        # Using subprocess to create a new process may also solve the problem, but it can be too complex (like Automatic1111 did).
+        # It seems that for now, the best option is to keep the model in memory, as most users use the Waifu Diffusion model with onnx.
+
+        return False
 
     def interrogate(
         self,
