@@ -1,5 +1,5 @@
 import os
-import torch
+import gc
 import pandas as pd
 import numpy as np
 
@@ -17,7 +17,8 @@ from modules.deepbooru import re_special as tag_escape_pattern
 from . import dbimutils
 
 # select a device to process
-use_cpu = ('all' in shared.cmd_opts.use_cpu) or ('interrogate' in shared.cmd_opts.use_cpu)
+use_cpu = ('all' in shared.cmd_opts.use_cpu) or (
+    'interrogate' in shared.cmd_opts.use_cpu)
 
 if use_cpu:
     tf_device_name = '/cpu:0'
@@ -86,6 +87,32 @@ class Interrogator:
 
         return tags
 
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def load(self):
+        raise NotImplementedError()
+
+    def unload(self) -> bool:
+        # unloaded = False
+
+        # if hasattr(self, 'model') and self.model is not None:
+        #     del self.model
+        #     unloaded = True
+        #     print(f'Unloaded {self.name}')
+
+        # if hasattr(self, 'tags'):
+        #     del self.tags
+
+        # return unloaded
+
+        # There is a bug in Keras where it is not possible to release a model that has been loaded into memory.
+        # Downgrading to keras==2.1.6 may solve the issue, but it may cause compatibility issues with other packages.
+        # Using subprocess to create a new process may also solve the problem, but it can be too complex (like Automatic1111 did).
+        # It seems that for now, the best option is to keep the model in memory, as most users use the Waifu Diffusion model with onnx.
+
+        return False
+
     def interrogate(
         self,
         image: Image
@@ -93,16 +120,16 @@ class Interrogator:
         Dict[str, float],  # rating confidents
         Dict[str, float]  # tag confidents
     ]:
-        pass
+        raise NotImplementedError()
 
 
 class DeepDanbooruInterrogator(Interrogator):
-    def __init__(self,  project_path: os.PathLike) -> None:
-        self.model = None
+    def __init__(self, name: str, project_path: os.PathLike) -> None:
+        super().__init__(name)
         self.project_path = project_path
 
     def load(self) -> None:
-        print(f'Loading DeepDanbooru project from {str(self.project_path)}')
+        print(f'Loading {self.name} from {str(self.project_path)}')
 
         # deepdanbooru package is not include in web-sd anymore
         # https://github.com/AUTOMATIC1111/stable-diffusion-webui/commit/c81d440d876dfd2ab3560410f37442ef56fc663
@@ -132,9 +159,23 @@ class DeepDanbooruInterrogator(Interrogator):
                 compile_model=False
             )
 
+            print(f'Loaded {self.name} model from {str(self.project_path)}')
+
             self.tags = ddp.load_tags_from_project(
                 project_path=self.project_path
             )
+
+    def unload(self) -> bool:
+        unloaded = super().unload()
+
+        if unloaded:
+            # tensorflow suck
+            # https://github.com/keras-team/keras/issues/2102
+            import tensorflow as tf
+            tf.keras.backend.clear_session()
+            gc.collect()
+
+        return unloaded
 
     def interrogate(
         self,
@@ -144,7 +185,7 @@ class DeepDanbooruInterrogator(Interrogator):
         Dict[str, float]  # tag confidents
     ]:
         # init model
-        if self.model is None:
+        if not hasattr(self, 'model') or self.model is None:
             self.load()
 
         import deepdanbooru.data as ddd
@@ -176,18 +217,18 @@ class DeepDanbooruInterrogator(Interrogator):
 class WaifuDiffusionInterrogator(Interrogator):
     def __init__(
         self,
+        name: str,
         repo='SmilingWolf/wd-v1-4-vit-tagger',
         model_path='model.onnx',
         tags_path='selected_tags.csv'
     ) -> None:
-        self.model = None
-
+        super().__init__(name)
         self.repo = repo
         self.model_path = model_path
         self.tags_path = tags_path
 
     def download(self) -> Tuple[os.PathLike, os.PathLike]:
-        print(f'Loading Waifu Diffusion tagger model file from {self.repo}')
+        print(f'Loading {self.name} model file from {self.repo}')
 
         model_path = Path(hf_hub_download(self.repo, filename=self.model_path))
         tags_path = Path(hf_hub_download(self.repo, filename=self.tags_path))
@@ -218,7 +259,7 @@ class WaifuDiffusionInterrogator(Interrogator):
 
         self.model = InferenceSession(str(model_path), providers=providers)
 
-        print(f'Loaded Waifu Diffusion tagger model from {model_path}')
+        print(f'Loaded {self.name} model from {model_path}')
 
         self.tags = pd.read_csv(tags_path)
 
@@ -230,7 +271,7 @@ class WaifuDiffusionInterrogator(Interrogator):
         Dict[str, float]  # tag confidents
     ]:
         # init model
-        if self.model is None:
+        if not hasattr(self, 'model') or self.model is None:
             self.load()
 
         # code for converting the image and running the model is taken from the link below
