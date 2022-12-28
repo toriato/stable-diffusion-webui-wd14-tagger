@@ -70,6 +70,7 @@ class Interrogator:
             )
         }
 
+        new_tags = []
         for tag in list(tags):
             new_tag = tag
 
@@ -82,8 +83,8 @@ class Interrogator:
             if add_confident_as_weight:
                 new_tag = f'({new_tag}:{tags[tag]})'
 
-            if new_tag != tag:
-                tags[new_tag] = tags.pop(tag)
+            new_tags.append((new_tag, tags[tag]))
+        tags = dict(new_tags)
 
         return tags
 
