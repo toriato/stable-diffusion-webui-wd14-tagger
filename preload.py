@@ -3,6 +3,8 @@ from argparse import ArgumentParser
 
 from modules.shared import models_path
 
+default_ddp_path = Path(models_path, 'deepdanbooru')
+
 
 def preload(parser: ArgumentParser):
     # default deepdanbooru use different paths:
@@ -13,5 +15,5 @@ def preload(parser: ArgumentParser):
         '--deepdanbooru-projects-path',
         type=str,
         help='Path to directory with DeepDanbooru project(s).',
-        default=Path(models_path, 'deepdanbooru')
+        default=default_ddp_path
     )

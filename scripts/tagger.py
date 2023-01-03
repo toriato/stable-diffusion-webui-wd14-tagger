@@ -11,6 +11,7 @@ from webui import wrap_gradio_gpu_call
 from modules import shared, scripts, script_callbacks, ui
 from modules import generation_parameters_copypaste as parameters_copypaste
 
+from preload import default_ddp_path
 from tagger import format
 from tagger.preset import Preset
 from tagger.interrogator import Interrogator, DeepDanbooruInterrogator, WaifuDiffusionInterrogator
@@ -42,7 +43,7 @@ def refresh_interrogators() -> List[str]:
 
     # load deepdanbooru project
     os.makedirs(
-        shared.cmd_opts.deepdanbooru_projects_path,
+        getattr(shared.cmd_opts, 'deepdanbooru_projects_path', default_ddp_path),
         exist_ok=True
     )
 
