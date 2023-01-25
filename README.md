@@ -60,7 +60,11 @@ I didn't make any models, and most of the code was heavily borrowed from the [De
 
 ## Model comparison
 
+* Used image: [hecattaart's artwork](https://vk.com/hecattaart?w=wall-89063929_3767)
+* Threshold: `0.5`
+
 ### DeepDanbooru
+Used the same image as the one used in the Screenshot item
 
 #### [`deepdanbooru-v3-20211112-sgd-e28`](https://github.com/KichangKim/DeepDanbooru/releases/tag/v3-20211112-sgd-e28)
 ```
