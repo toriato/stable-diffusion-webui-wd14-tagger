@@ -35,20 +35,37 @@ def refresh_interrogators() -> List[str]:
     interrogators = {
         'wd14-vit-v2': WaifuDiffusionInterrogator(
             'wd14-vit-v2',
-            repo='SmilingWolf/wd-v1-4-vit-tagger-v2'
+            repo_id='SmilingWolf/wd-v1-4-vit-tagger-v2',
+            revision='v2.0'
         ),
         'wd14-convnext-v2': WaifuDiffusionInterrogator(
             'wd14-convnext-v2',
-            repo='SmilingWolf/wd-v1-4-convnext-tagger-v2'
+            repo_id='SmilingWolf/wd-v1-4-convnext-tagger-v2',
+            revision='v2.0'
         ),
         'wd14-swinv2-v2': WaifuDiffusionInterrogator(
             'wd14-swinv2-v2',
-            repo='SmilingWolf/wd-v1-4-swinv2-tagger-v2'
+            repo_id='SmilingWolf/wd-v1-4-swinv2-tagger-v2',
+            revision='v2.0'
         ),
-        'wd14-vit': WaifuDiffusionInterrogator('wd14-vit'),
+        'wd14-vit-v2-git': WaifuDiffusionInterrogator(
+            'wd14-vit-v2-git',
+            repo_id='SmilingWolf/wd-v1-4-vit-tagger-v2'
+        ),
+        'wd14-convnext-v2-git': WaifuDiffusionInterrogator(
+            'wd14-convnext-v2-git',
+            repo_id='SmilingWolf/wd-v1-4-convnext-tagger-v2'
+        ),
+        'wd14-swinv2-v2-git': WaifuDiffusionInterrogator(
+            'wd14-swinv2-v2-git',
+            repo_id='SmilingWolf/wd-v1-4-swinv2-tagger-v2'
+        ),
+        'wd14-vit': WaifuDiffusionInterrogator(
+            'wd14-vit',
+            repo_id='SmilingWolf/wd-v1-4-vit-tagger'),
         'wd14-convnext': WaifuDiffusionInterrogator(
             'wd14-convnext',
-            repo='SmilingWolf/wd-v1-4-convnext-tagger'
+            repo_id='SmilingWolf/wd-v1-4-convnext-tagger'
         ),
     }
 

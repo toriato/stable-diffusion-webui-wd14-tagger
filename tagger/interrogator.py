@@ -219,20 +219,22 @@ class WaifuDiffusionInterrogator(Interrogator):
     def __init__(
         self,
         name: str,
-        repo='SmilingWolf/wd-v1-4-vit-tagger',
         model_path='model.onnx',
-        tags_path='selected_tags.csv'
+        tags_path='selected_tags.csv',
+        **kwargs
     ) -> None:
         super().__init__(name)
-        self.repo = repo
         self.model_path = model_path
         self.tags_path = tags_path
+        self.kwargs = kwargs
 
     def download(self) -> Tuple[os.PathLike, os.PathLike]:
-        print(f'Loading {self.name} model file from {self.repo}')
+        print(f"Loading {self.name} model file from {self.kwargs['repo_id']}")
 
-        model_path = Path(hf_hub_download(self.repo, filename=self.model_path))
-        tags_path = Path(hf_hub_download(self.repo, filename=self.tags_path))
+        model_path = Path(hf_hub_download(
+            **self.kwargs, filename=self.model_path))
+        tags_path = Path(hf_hub_download(
+            **self.kwargs, filename=self.tags_path))
         return model_path, tags_path
 
     def load(self) -> None:
