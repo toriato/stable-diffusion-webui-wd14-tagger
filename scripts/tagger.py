@@ -32,14 +32,25 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 def refresh_interrogators() -> List[str]:
     global interrogators
-    interrogators = {}
-
-    # load waifu diffusion 1.4 tagger models
-    interrogators['wd14-vit'] = WaifuDiffusionInterrogator('wd14-vit')
-    interrogators['wd14-convnext'] = WaifuDiffusionInterrogator(
-        'wd14-convnext',
-        repo='SmilingWolf/wd-v1-4-convnext-tagger'
-    )
+    interrogators = {
+        'wd14-vit-v2': WaifuDiffusionInterrogator(
+            'wd14-vit-v2',
+            repo='SmilingWolf/wd-v1-4-vit-tagger-v2'
+        ),
+        'wd14-convnext-v2': WaifuDiffusionInterrogator(
+            'wd14-convnext-v2',
+            repo='SmilingWolf/wd-v1-4-convnext-tagger-v2'
+        ),
+        'wd14-swinv2-v2': WaifuDiffusionInterrogator(
+            'wd14-swinv2-v2',
+            repo='SmilingWolf/wd-v1-4-swinv2-tagger-v2'
+        ),
+        'wd14-vit': WaifuDiffusionInterrogator('wd14-vit'),
+        'wd14-convnext': WaifuDiffusionInterrogator(
+            'wd14-convnext',
+            repo='SmilingWolf/wd-v1-4-convnext-tagger'
+        ),
+    }
 
     # load deepdanbooru project
     os.makedirs(
