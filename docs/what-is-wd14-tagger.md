@@ -1,4 +1,4 @@
-What is Waifu Diffison 1.4 model?
+What is Waifu Diffison 1.4 Tagger?
 ---
 
 Image to text model created and maintained by [MrSmilingWolf](https://huggingface.co/SmilingWolf), which was used to train Waifu Diffusion.
