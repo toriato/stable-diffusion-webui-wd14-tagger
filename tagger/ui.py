@@ -259,7 +259,7 @@ def on_ui_tabs():
 
                         batch_output_action_on_conflict = utils.preset.component(
                             gr.Dropdown,
-                            label='Action on exiting caption',
+                            label='Action on existing caption',
                             value='ignore',
                             choices=[
                                 'ignore',
