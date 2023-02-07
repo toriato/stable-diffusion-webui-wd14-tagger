@@ -2,6 +2,7 @@ import os
 import json
 import gradio as gr
 
+from collections import OrderedDict
 from pathlib import Path
 from glob import glob
 from PIL import Image, UnidentifiedImageError
@@ -32,6 +33,7 @@ def on_interrogate(
     batch_output_dir: str,
     batch_output_filename_format: str,
     batch_output_action_on_conflict: str,
+    batch_remove_duplicated_tag: bool,
     batch_output_save_json: bool,
 
     interrogator: str,
@@ -178,7 +180,14 @@ def on_interrogate(
             else:
                 output.append(plain_tags)
 
-            output_path.write_text(', '.join(output))
+            if batch_remove_duplicated_tag:
+                output_path.write_text(', '.join(
+                    OrderedDict.fromkeys(
+                        map(str.strip, ','.join(output).split(','))
+                    )
+                ))
+            else:
+                output_path.write_text(', '.join(output))
 
             if batch_output_save_json:
                 output_path.with_suffix('.json').write_text(
@@ -267,6 +276,11 @@ def on_ui_tabs():
                                 'append',
                                 'prepend'
                             ]
+                        )
+
+                        batch_remove_duplicated_tag = utils.preset.component(
+                            gr.Checkbox,
+                            label='Remove duplicated tag'
                         )
 
                         batch_output_save_json = utils.preset.component(
@@ -435,6 +449,7 @@ def on_ui_tabs():
                     batch_output_dir,
                     batch_output_filename_format,
                     batch_output_action_on_conflict,
+                    batch_remove_duplicated_tag,
                     batch_output_save_json,
 
                     # options
