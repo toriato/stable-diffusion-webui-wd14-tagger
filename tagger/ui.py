@@ -154,7 +154,7 @@ def on_interrogate(
             output = []
 
             if output_path.is_file():
-                output.append(output_path.read_text().strip())
+                output.append(output_path.read_text(errors='ignore').strip())
 
                 if batch_output_action_on_conflict == 'ignore':
                     print(f'skipping {path}')
@@ -181,13 +181,19 @@ def on_interrogate(
                 output.append(plain_tags)
 
             if batch_remove_duplicated_tag:
-                output_path.write_text(', '.join(
-                    OrderedDict.fromkeys(
-                        map(str.strip, ','.join(output).split(','))
-                    )
-                ))
+                output_path.write_text(
+                    ', '.join(
+                        OrderedDict.fromkeys(
+                            map(str.strip, ','.join(output).split(','))
+                        )
+                    ),
+                    encoding='utf-8'
+                )
             else:
-                output_path.write_text(', '.join(output))
+                output_path.write_text(
+                    ', '.join(output),
+                    encoding='utf-8'
+                )
 
             if batch_output_save_json:
                 output_path.with_suffix('.json').write_text(
