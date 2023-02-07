@@ -90,13 +90,13 @@ def on_interrogate(
     if batch_input_glob != '':
         # if there is no glob pattern, insert it automatically
         if not batch_input_glob.endswith('*'):
-            if not batch_input_glob.endswith('/'):
-                batch_input_glob += '/'
+            if not batch_input_glob.endswith(os.sep):
+                batch_input_glob += os.sep
             batch_input_glob += '*'
 
         # get root directory of input glob pattern
         base_dir = batch_input_glob.replace('?', '*')
-        base_dir = base_dir.split('/*').pop(0)
+        base_dir = base_dir.split(os.sep + '*').pop(0)
 
         # check the input directory path
         if not os.path.isdir(base_dir):
