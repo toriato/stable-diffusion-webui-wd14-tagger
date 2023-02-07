@@ -152,7 +152,7 @@ def on_interrogate(
             output = []
 
             if output_path.is_file():
-                output.append(output_path.read_text())
+                output.append(output_path.read_text().strip())
 
                 if batch_output_action_on_conflict == 'ignore':
                     print(f'skipping {path}')
@@ -178,7 +178,7 @@ def on_interrogate(
             else:
                 output.append(plain_tags)
 
-            output_path.write_text(' '.join(output))
+            output_path.write_text(', '.join(output))
 
             if batch_output_save_json:
                 output_path.with_suffix('.json').write_text(
