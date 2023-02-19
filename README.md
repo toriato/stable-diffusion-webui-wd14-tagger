@@ -47,6 +47,7 @@ I didn't make any models, and most of the code was heavily borrowed from the [De
 
 1. Start or restart the WebUI.
    - or you can press refresh button after *Interrogator* dropdown box.
+   - "You must close stable diffusion completely after installation and re-run it!"
 
 
 ## Model comparison
