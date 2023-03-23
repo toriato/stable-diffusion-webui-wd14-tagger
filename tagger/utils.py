@@ -16,6 +16,11 @@ interrogators: Dict[str, Interrogator] = {}
 def refresh_interrogators() -> List[str]:
     global interrogators
     interrogators = {
+        'wd14-convnextv2-v2': WaifuDiffusionInterrogator(
+            'wd14-convnext-v2',
+            repo_id='SmilingWolf/wd-v1-4-convnextv2-tagger-v2',
+            revision='v3.0'
+        ),
         'wd14-vit-v2': WaifuDiffusionInterrogator(
             'wd14-vit-v2',
             repo_id='SmilingWolf/wd-v1-4-vit-tagger-v2',
