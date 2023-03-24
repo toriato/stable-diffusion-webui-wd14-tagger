@@ -19,7 +19,7 @@ def refresh_interrogators() -> List[str]:
         'wd14-convnextv2-v2': WaifuDiffusionInterrogator(
             'wd14-convnext-v2',
             repo_id='SmilingWolf/wd-v1-4-convnextv2-tagger-v2',
-            revision='v3.0'
+            revision='v2.0'
         ),
         'wd14-vit-v2': WaifuDiffusionInterrogator(
             'wd14-vit-v2',
@@ -35,6 +35,10 @@ def refresh_interrogators() -> List[str]:
             'wd14-swinv2-v2',
             repo_id='SmilingWolf/wd-v1-4-swinv2-tagger-v2',
             revision='v2.0'
+        ),
+        'wd14-convnextv2-v2': WaifuDiffusionInterrogator(
+            'wd14-convnext-v2',
+            repo_id='SmilingWolf/wd-v1-4-convnextv2-tagger-v2',
         ),
         'wd14-vit-v2-git': WaifuDiffusionInterrogator(
             'wd14-vit-v2-git',
