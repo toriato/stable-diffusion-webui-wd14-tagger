@@ -40,6 +40,7 @@ class Interrogator:
         threshold=0.35,
         additional_tags: List[str] = [],
         exclude_tags: List[str] = [],
+        include_tags: List[str] = [],
         sort_by_alphabetical_order=False,
         add_confident_as_weight=False,
         replace_underscore=False,
@@ -63,6 +64,7 @@ class Interrogator:
             # filter tags
             if (
                 c >= threshold
+                and (len(include_tags) == 0 or t in include_tags)
                 and t not in exclude_tags
             )
         }

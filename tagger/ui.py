@@ -40,6 +40,7 @@ def on_interrogate(
     threshold: float,
     additional_tags: str,
     exclude_tags: str,
+    include_tags: str,
     sort_by_alphabetical_order: bool,
     add_confident_as_weight: bool,
     replace_underscore: bool,
@@ -57,6 +58,7 @@ def on_interrogate(
         threshold,
         split_str(additional_tags),
         split_str(exclude_tags),
+        split_str(include_tags),
         sort_by_alphabetical_order,
         add_confident_as_weight,
         replace_underscore,
@@ -369,6 +371,12 @@ def on_ui_tabs():
                     elem_id='exclude-tags'
                 )
 
+                include_tags = utils.preset.component(
+                    gr.Textbox,
+                    label='Only include these tags (split by comma)',
+                    elem_id='include-tags'
+                )
+
                 sort_by_alphabetical_order = utils.preset.component(
                     gr.Checkbox,
                     label='Sort by alphabetical order',
@@ -463,6 +471,7 @@ def on_ui_tabs():
                     threshold,
                     additional_tags,
                     exclude_tags,
+                    include_tags,
                     sort_by_alphabetical_order,
                     add_confident_as_weight,
                     replace_underscore,
