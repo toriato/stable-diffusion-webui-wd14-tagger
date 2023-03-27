@@ -64,7 +64,7 @@ class Interrogator:
             # filter tags
             if (
                 c >= threshold
-                and (len(include_tags) == 0 or t in include_tags)
+                and (not include_tags or t in include_tags)
                 and t not in exclude_tags
             )
         }
