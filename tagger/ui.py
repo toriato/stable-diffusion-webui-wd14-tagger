@@ -36,7 +36,7 @@ def on_interrogate(
     batch_remove_duplicated_tag: bool,
     batch_output_save_json: bool,
 
-    interrogator: str,
+    interrogator_name: str,
     threshold: float,
     additional_tags: str,
     exclude_tags: str,
@@ -48,10 +48,9 @@ def on_interrogate(
 
     unload_model_after_running: bool
 ):
-    if interrogator not in utils.interrogators:
+    interrogator: Interrogator = next((i for i in utils.interrogators.values() if interrogator_name == i.name), None)
+    if interrogator is None:
         return ['', None, None, f"'{interrogator}' is not a valid interrogator"]
-
-    interrogator: Interrogator = utils.interrogators[interrogator]
 
     postprocess_opts = (
         threshold,
@@ -78,7 +77,7 @@ def on_interrogate(
         return [
             ', '.join(processed_tags),
             ratings,
-            tags,
+            dict(list(tags.items())[:200]),
             ''
         ]
 
@@ -326,7 +325,12 @@ def on_ui_tabs():
                 # interrogator selector
                 with gr.Column():
                     with gr.Row(variant='compact'):
-                        interrogator_names = utils.refresh_interrogators()
+                        def refresh():
+                            utils.refresh_interrogators()
+                            return sorted(x.name for x in utils.interrogators.values()) 
+
+                        interrogator_names = refresh()        
+                        
                         interrogator = utils.preset.component(
                             gr.Dropdown,
                             label='Interrogator',
@@ -341,7 +345,7 @@ def on_ui_tabs():
                         ui.create_refresh_button(
                             interrogator,
                             lambda: None,
-                            lambda: {'choices': utils.refresh_interrogators()},
+                            lambda: {'choices': refresh()},
                             'refresh_interrogator'
                         )
 

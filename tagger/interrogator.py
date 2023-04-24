@@ -1,3 +1,4 @@
+import json
 import os
 import gc
 import pandas as pd
@@ -7,7 +8,6 @@ from typing import Tuple, List, Dict
 from io import BytesIO
 from PIL import Image
 
-from pathlib import Path
 from huggingface_hub import hf_hub_download
 
 from modules import shared
@@ -20,8 +20,13 @@ from . import dbimutils
 use_cpu = ('all' in shared.cmd_opts.use_cpu) or (
     'interrogate' in shared.cmd_opts.use_cpu)
 
+# https://onnxruntime.ai/docs/execution-providers/
+# https://github.com/toriato/stable-diffusion-webui-wd14-tagger/commit/e4ec460122cf674bbf984df30cdb10b4370c1224#r92654958
+onnxrt_providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+
 if use_cpu:
     tf_device_name = '/cpu:0'
+    onnxrt_providers.pop(0)
 else:
     tf_device_name = '/gpu:0'
 
@@ -94,13 +99,13 @@ class Interrogator:
     def unload(self) -> bool:
         unloaded = False
 
-        if hasattr(self, 'model') and self.model is not None:
-            del self.model
+        if self.model is not None:
+            self.model = None
             unloaded = True
+            gc.collect()
             print(f'Unloaded {self.name}')
 
-        if hasattr(self, 'tags'):
-            del self.tags
+        self.tags = None
 
         return unloaded
 
@@ -118,6 +123,7 @@ class DeepDanbooruInterrogator(Interrogator):
     def __init__(self, name: str, project_path: os.PathLike) -> None:
         super().__init__(name)
         self.project_path = project_path
+        self.model = None
 
     def load(self) -> None:
         print(f'Loading {self.name} from {str(self.project_path)}')
@@ -183,7 +189,7 @@ class DeepDanbooruInterrogator(Interrogator):
         Dict[str, float]  # tag confidents
     ]:
         # init model
-        if not hasattr(self, 'model') or self.model is None:
+        if self.model is None:
             self.load()
 
         import deepdanbooru.data as ddd
@@ -212,31 +218,11 @@ class DeepDanbooruInterrogator(Interrogator):
         return ratings, tags
 
 
-class WaifuDiffusionInterrogator(Interrogator):
-    def __init__(
-        self,
-        name: str,
-        model_path='model.onnx',
-        tags_path='selected_tags.csv',
-        **kwargs
-    ) -> None:
-        super().__init__(name)
-        self.model_path = model_path
-        self.tags_path = tags_path
-        self.kwargs = kwargs
-
-    def download(self) -> Tuple[os.PathLike, os.PathLike]:
-        print(f"Loading {self.name} model file from {self.kwargs['repo_id']}")
-
-        model_path = Path(hf_hub_download(
-            **self.kwargs, filename=self.model_path))
-        tags_path = Path(hf_hub_download(
-            **self.kwargs, filename=self.tags_path))
-        return model_path, tags_path
-
-    def load(self) -> None:
-        model_path, tags_path = self.download()
-
+def get_onnxrt():
+    try:
+        import onnxruntime
+        return onnxruntime
+    except ImportError:
         # only one of these packages should be installed at a time in any one environment
         # https://onnxruntime.ai/docs/get-started/with-python.html#install-onnx-runtime
         # TODO: remove old package when the environment changes?
@@ -249,19 +235,42 @@ class WaifuDiffusionInterrogator(Interrogator):
 
             run_pip(f'install {package}', 'onnxruntime')
 
-        from onnxruntime import InferenceSession
+    import onnxruntime
+    return onnxruntime
 
-        # https://onnxruntime.ai/docs/execution-providers/
-        # https://github.com/toriato/stable-diffusion-webui-wd14-tagger/commit/e4ec460122cf674bbf984df30cdb10b4370c1224#r92654958
-        providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
-        if use_cpu:
-            providers.pop(0)
 
-        self.model = InferenceSession(str(model_path), providers=providers)
+class WaifuDiffusionInterrogator(Interrogator):
+    def __init__(
+        self,
+        name: str,
+        repo_id: str,
+        model_path='model.onnx',
+        tags_path='selected_tags.csv',
+        **kwargs
+    ) -> None:
+        super().__init__(name)
+        self.repo_id = repo_id
+        self.model_path = model_path
+        self.tags_path = tags_path
+        self.model = None
+        self.tags = None
 
-        print(f'Loaded {self.name} model from {model_path}')
+    def download(self) -> Tuple[str, str]:
+        print(f"Loading {self.name} model file from {self.repo_id}")
 
-        self.tags = pd.read_csv(tags_path)
+        model_path = hf_hub_download(self.repo_id, self.model_path)
+        tags_path = hf_hub_download(self.repo_id, self.model_path)
+        return model_path, tags_path
+
+    def load(self) -> None:
+        self.model_path, self.tags_path = self.download()
+
+        ort = get_onnxrt()
+        self.model = ort.InferenceSession(self.model_path, providers=onnxrt_providers)
+
+        print(f'Loaded {self.name} model from {self.repo_id}')
+
+        self.tags = pd.read_csv(self.tags_path)
 
     def interrogate(
         self,
@@ -271,7 +280,7 @@ class WaifuDiffusionInterrogator(Interrogator):
         Dict[str, float]  # tag confidents
     ]:
         # init model
-        if not hasattr(self, 'model') or self.model is None:
+        if self.model is None:
             self.load()
 
         # code for converting the image and running the model is taken from the link below
@@ -282,12 +291,9 @@ class WaifuDiffusionInterrogator(Interrogator):
         _, height, _, _ = self.model.get_inputs()[0].shape
 
         # alpha to white
-        image = image.convert('RGBA')
-        new_image = Image.new('RGBA', image.size, 'WHITE')
-        new_image.paste(image, mask=image)
-        image = new_image.convert('RGB')
-        image = np.asarray(image)
+        image = dbimutils.fill_transparent(image)
 
+        image = np.asarray(image)
         # PIL RGB to OpenCV BGR
         image = image[:, :, ::-1]
 
@@ -311,3 +317,69 @@ class WaifuDiffusionInterrogator(Interrogator):
         tags = dict(tags[4:].values)
 
         return ratings, tags
+
+
+class MLDanbooruInterrogator(Interrogator):
+    def __init__(
+        self,
+        name: str,
+        repo_id: str,
+        model_path: str,
+        tags_path='classes.json'
+    ) -> None:
+        super().__init__(name)
+        self.model_path = model_path
+        self.tags_path = tags_path
+        self.repo_id = repo_id
+        self.tags = None
+        self.model = None
+
+    def download(self) -> Tuple[str, str]:
+        print(f"Loading {self.name} model file from {self.repo_id}")
+
+        model_path = hf_hub_download(
+            repo_id=self.repo_id, filename=self.model_path)
+        tags_path = hf_hub_download(
+            repo_id=self.repo_id, filename=self.tags_path)
+        return model_path, tags_path
+
+    def load(self) -> None:
+        self.model_path, self.tags_path = self.download()
+
+        ort = get_onnxrt()
+        self.model = ort.InferenceSession(self.model_path, providers=onnxrt_providers)
+
+        print(f'Loaded {self.name} model from {self.model_path}')
+
+        with open(self.tags_path, 'r', encoding='utf-8') as f:
+            self.tags = json.load(f)
+
+    def interrogate(
+        self,
+        image: Image
+    ) -> Tuple[
+        Dict[str, float],  # rating confidents
+        Dict[str, float]  # tag confidents
+    ]:
+        # init model
+        if self.model is None:
+            self.load()
+
+        image = dbimutils.fill_transparent(image)
+        image = dbimutils.resize(image, 448) # TODO CUSTOMIZE
+
+        x = np.asarray(image, dtype=np.float32) / 255
+        # HWC -> 1CHW
+        x = x.transpose((2, 0, 1))
+        x = np.expand_dims(x, 0)
+
+        input_ = self.model.get_inputs()[0]
+        output = self.model.get_outputs()[0]
+        # evaluate model
+        y, = self.model.run([output.name], {input_.name: x})
+
+        # Softmax
+        y = 1 / (1 + np.exp(-y))
+
+        tags = {tag: float(conf) for tag, conf in zip(self.tags, y.flatten())}
+        return None, tags
