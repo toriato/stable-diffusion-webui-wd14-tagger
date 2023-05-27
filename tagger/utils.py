@@ -70,7 +70,10 @@ def refresh_interrogators() -> List[str]:
     for path in os.scandir(deepdanbooru_projects_path):
         if not path.is_dir():
             continue
-
+        
+        if not Path(path, 'project.json').is_file():
+            continue
+        
         interrogators[path.name] = DeepDanbooruInterrogator(path.name, path)
 
     return sorted(interrogators.keys())
