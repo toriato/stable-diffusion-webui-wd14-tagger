@@ -86,19 +86,20 @@ def refresh_interrogators() -> List[str]:
 
         #if no file with the extension .onnx is found, skip. If there is more than one file with that name, warn. Else put it in model_path
         onnx_files = [x for x in os.scandir(path) if x.name.endswith('.onnx')]
-        if len(onnx_files) == 0:
-            print(f"Warning: {path} has no model, skipping")
-            continue
-        elif len(onnx_files) > 1:
-            print(f"Warning: {path} has multiple models, skipping")
+        if len(onnx_files) != 1:
+            print(f"Warning: {path} requires exactly one .onnx model, skipping")
             continue
         model_path = Path(path, onnx_files[0].name)
 
-        if not Path(path, 'tags-selected.csv').is_file():
-            print(f"Warning: {path} has a model but no tags-selected.csv file, skipping")
+        csv = [x for x in os.scandir(path) if x.name.endswith('.csv')]
+        if len(csv) == 0:
+            print(f"Warning: {path} has no selected tags .csv file, skipping")
             continue
 
-        interrogators[path.name] = WaifuDiffusionInterrogator(path.name,model_path=model_path, tags_path=Path(path, 'tags-selected.csv'))
+        # sort so that csv files with `tag' or `select' end up front
+        csv.sort(key=lambda k: (-1 if "tag" in k.name.lower() else 1) + (-1 if "select" in k.name.lower() else 1))
+
+        interrogators[path.name] = WaifuDiffusionInterrogator(path.name,model_path=model_path, tags_path=Path(path, csv[0]))
 
     return sorted(interrogators.keys())
 
