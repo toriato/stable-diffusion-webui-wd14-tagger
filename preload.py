@@ -21,7 +21,7 @@ def preload(parser: ArgumentParser):
     parser.add_argument(
         '--onnxtagger-path',
         type=str,
-        help='Path to directory with DeepDanbooru project(s).',
+        help='Path to directory with Onnyx project(s).',
         default=default_onnx_path
     )
 
