@@ -79,27 +79,29 @@ def refresh_interrogators() -> List[str]:
             continue
 
         interrogators[path.name] = DeepDanbooruInterrogator(path.name, path)
-    #scan for onnx models as well
+    # scan for onnx models as well
     for path in os.scandir(shared.cmd_opts.onnxtagger_path):
         if not path.is_dir():
             continue
 
-        #if no file with the extension .onnx is found, skip. If there is more than one file with that name, warn. Else put it in model_path
         onnx_files = [x for x in os.scandir(path) if x.name.endswith('.onnx')]
         if len(onnx_files) != 1:
-            print(f"Warning: {path} requires exactly one .onnx model, skipping")
+            print(f"Warning: {path} requires exactly one .onnx model, skipped")
             continue
         model_path = Path(path, onnx_files[0].name)
 
         csv = [x for x in os.scandir(path) if x.name.endswith('.csv')]
         if len(csv) == 0:
-            print(f"Warning: {path} has no selected tags .csv file, skipping")
+            print(f"Warning: {path} has no selected tags .csv file, skipped")
             continue
 
-        # sort so that csv files with `tag' or `select' end up front
-        csv.sort(key=lambda k: (-1 if "tag" in k.name.lower() else 1) + (-1 if "select" in k.name.lower() else 1))
+        def tag_select_csvs_up_front(k):
+            sum([-1 if t in k.name.lower() else 1 for t in ["tag", "select"]])
 
-        interrogators[path.name] = WaifuDiffusionInterrogator(path.name,model_path=model_path, tags_path=Path(path, csv[0]))
+        csv.sort(key=tag_select_csvs_up_front)
+        tags_path = Path(path, csv[0])
+
+        interrogators[path.name] = WaifuDiffusionInterrogator(path.name, model_path=model_path, tags_path=tags_path)
 
     return sorted(interrogators.keys())
 
