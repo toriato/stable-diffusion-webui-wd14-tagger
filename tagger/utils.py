@@ -4,7 +4,7 @@ from typing import List, Dict
 from pathlib import Path
 
 from modules import shared, scripts
-from preload import default_ddp_path
+from preload import default_ddp_path, default_onnx_path
 from tagger.preset import Preset
 from tagger.interrogator import Interrogator, DeepDanbooruInterrogator, WaifuDiffusionInterrogator
 
@@ -66,6 +66,10 @@ def refresh_interrogators() -> List[str]:
         getattr(shared.cmd_opts, 'deepdanbooru_projects_path', default_ddp_path),
         exist_ok=True
     )
+    os.makedirs(
+        getattr(shared.cmd_opts, 'onnxtagger_path', default_onnx_path),
+        exist_ok=True
+    )
 
     for path in os.scandir(shared.cmd_opts.deepdanbooru_projects_path):
         if not path.is_dir():
@@ -75,6 +79,26 @@ def refresh_interrogators() -> List[str]:
             continue
 
         interrogators[path.name] = DeepDanbooruInterrogator(path.name, path)
+    #scan for onnx models as well
+    for path in os.scandir(shared.cmd_opts.onnxtagger_path):
+        if not path.is_dir():
+            continue
+
+        #if no file with the extension .onnx is found, skip. If there is more than one file with that name, warn. Else put it in model_path
+        onnx_files = [x for x in os.scandir(path) if x.name.endswith('.onnx')]
+        if len(onnx_files) == 0:
+            print(f"Warning: {path} has no model, skipping")
+            continue
+        elif len(onnx_files) > 1:
+            print(f"Warning: {path} has multiple models, skipping")
+            continue
+        model_path = Path(path, onnx_files[0].name)
+
+        if not Path(path, 'tags-selected.csv').is_file():
+            print(f"Warning: {path} has a model but no tags-selected.csv file, skipping")
+            continue
+
+        interrogators[path.name] = WaifuDiffusionInterrogator(path.name,model_path=model_path, tags_path=Path(path, 'tags-selected.csv'))
 
     return sorted(interrogators.keys())
 
