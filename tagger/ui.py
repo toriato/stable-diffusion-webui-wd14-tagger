@@ -1,6 +1,7 @@
 import os
 import json
 import gradio as gr
+import tqdm
 
 from collections import OrderedDict
 from pathlib import Path
@@ -47,7 +48,7 @@ def on_interrogate(
     escape_tag: bool,
 
     unload_model_after_running: bool,
-    message_silence: bool
+    verbose: bool
 ):
     if interrogator not in utils.interrogators:
         return ['', None, None, f"'{interrogator}' is not a valid interrogator"]
@@ -118,8 +119,7 @@ def on_interrogate(
         ]
 
         print(f'found {len(paths)} image(s)')
-
-        for path in paths:
+        for path in tqdm.tqdm(paths, disable=verbose, desc='Tagging'):
             try:
                 image = Image.open(path)
             except UnidentifiedImageError:
@@ -158,7 +158,7 @@ def on_interrogate(
                 output.append(output_path.read_text(errors='ignore').strip())
 
                 if batch_output_action_on_conflict == 'ignore':
-                    if not message_silence:
+                    if verbose:
                         print(f'skipping {path}')
                     continue
 
@@ -168,7 +168,7 @@ def on_interrogate(
                 *postprocess_opts
             )
 
-            if not message_silence:
+            if verbose:
                 print(
                     f'found {len(processed_tags)} tags out of {len(tags)} from {path}'
                 )
@@ -401,9 +401,10 @@ def on_ui_tabs():
                     label='Unload model after running',
                 )
 
-                message_silence = utils.preset.component(
+                verbose = utils.preset.component(
                     gr.Checkbox,
-                    label='Print less messages',
+                    # tooltip: 'Print tag counts per file, no progress bar',
+                    label='Verbose'
                 )
             # output components
             with gr.Column(variant='panel'):
@@ -477,7 +478,7 @@ def on_ui_tabs():
                     escape_tag,
 
                     unload_model_after_running,
-                    message_silence
+                    verbose
                 ],
                 outputs=[
                     tags,
