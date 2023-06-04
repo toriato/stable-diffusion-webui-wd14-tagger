@@ -46,7 +46,8 @@ def on_interrogate(
     replace_underscore_excludes: str,
     escape_tag: bool,
 
-    unload_model_after_running: bool
+    unload_model_after_running: bool,
+    message_silence: bool
 ):
     if interrogator not in utils.interrogators:
         return ['', None, None, f"'{interrogator}' is not a valid interrogator"]
@@ -153,11 +154,12 @@ def on_interrogate(
 
             output = []
 
-            if output_path.is_file():
+            if output_path.is_file() and batch_output_action_on_conflict != 'copy':
                 output.append(output_path.read_text(errors='ignore').strip())
 
                 if batch_output_action_on_conflict == 'ignore':
-                    print(f'skipping {path}')
+                    if not message_silence:
+                        print(f'skipping {path}')
                     continue
 
             ratings, tags = interrogator.interrogate(image)
@@ -166,19 +168,22 @@ def on_interrogate(
                 *postprocess_opts
             )
 
-            # TODO: switch for less print
-            print(
-                f'found {len(processed_tags)} tags out of {len(tags)} from {path}'
-            )
+            if not message_silence:
+                print(
+                    f'found {len(processed_tags)} tags out of {len(tags)} from {path}'
+                )
 
             plain_tags = ', '.join(processed_tags)
 
-            if batch_output_action_on_conflict == 'copy':
+            if batch_output_action_on_conflict == 'copy' or len(output) == 0:
                 output = [plain_tags]
-            elif batch_output_action_on_conflict == 'prepend':
-                output.insert(0, plain_tags)
-            else:
-                output.append(plain_tags)
+            elif len(plain_tags) > 0:
+                if batch_output_action_on_conflict == 'prepend':
+                    plain_tags += ', '
+                    output.insert(0, plain_tags)
+                else:
+                    output[0] += ', '
+                    output.append(plain_tags)
 
             if batch_remove_duplicated_tag:
                 output_path.write_text(
@@ -199,7 +204,6 @@ def on_interrogate(
                 output_path.with_suffix('.json').write_text(
                     json.dumps([ratings, tags])
                 )
-
         print('all done :)')
 
     if unload_model_after_running:
@@ -368,7 +372,6 @@ def on_ui_tabs():
                     label='Exclude tags (split by comma)',
                     elem_id='exclude-tags'
                 )
-
                 sort_by_alphabetical_order = utils.preset.component(
                     gr.Checkbox,
                     label='Sort by alphabetical order',
@@ -398,6 +401,10 @@ def on_ui_tabs():
                     label='Unload model after running',
                 )
 
+                message_silence = utils.preset.component(
+                    gr.Checkbox,
+                    label='Print less messages',
+                )
             # output components
             with gr.Column(variant='panel'):
                 tags = gr.Textbox(
@@ -469,7 +476,8 @@ def on_ui_tabs():
                     replace_underscore_excludes,
                     escape_tag,
 
-                    unload_model_after_running
+                    unload_model_after_running,
+                    message_silence
                 ],
                 outputs=[
                     tags,
