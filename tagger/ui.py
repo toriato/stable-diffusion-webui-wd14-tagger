@@ -80,7 +80,7 @@ def on_interrogate(
         return [
             ', '.join(processed_tags.keys() if add_confident_as_weight else processed_tags),
             ratings,
-            tags,
+            dict(filter(lambda x: x[1] >= threshold / 2, tags.items())),
             ''
         ]
 
