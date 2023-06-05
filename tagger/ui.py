@@ -199,9 +199,6 @@ def on_interrogate(
 
             if verbose:
                 print(f'{path}: {len(processed_tags)}/{len(tags)} tags found')
-            else:
-                # go up one line so the bar does not mess up the console
-                print("\033[F", end="")
 
             if batch_output_action_on_conflict == 'replace' or not output:
                 output = [', '.join(processed_tags)]
