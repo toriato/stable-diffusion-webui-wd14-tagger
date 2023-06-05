@@ -181,8 +181,15 @@ def on_interrogate(
                         if at > 0 and k[0] == '(' and k[-1] == ')':
                             v = float(k[at+1:-1])
                             weights[k[1:at]] = v
+                            if not add_confident_as_weight:
+                                output[i] = k[1:at]
                         else:
-                            print(f'{path}: no weights, assumed linear')
+                            # FIXME: exponential, hyperbolic, or harmonic
+                            # decline is probably a more realistic fit
+                            if i == 0:
+                                print(f'{path}: no weights, assumed linear')
+                                # and that the prior was one iteration
+                                ict = 1.0
                             weights[k] = (n - i) / n
 
                 if batch_output_action_on_conflict == 'ignore':
@@ -236,16 +243,17 @@ def on_interrogate(
                     output.sort(key=lambda x: x[1], reverse=True)
                     output = list(map(lambda x: '(%s:%f)' % x, output))
                 elif batch_output_action_on_conflict == 'prepend':
-                    output.insert(0, ', '.join(processed_tags) + ', ')
+                    output.insert(0, ', '.join(processed_tags))
                 else:
-                    output.append(', ' + ', '.join(processed_tags))
+                    output.append(', '.join(processed_tags))
 
             if batch_remove_duplicated_tag and not add_confident_as_weight:
                 output_str = ','.join(output).split(',')
                 output = OrderedDict.fromkeys(map(str.strip, output_str))
 
-            # postpend the incremented interrogation count
-            output.append(str(ict + 1.0))
+            if add_confident_as_weight:
+                # postpend the incremented interrogation count
+                output.append(str(ict + 1.0))
 
             output_path.write_text(', '.join(output), encoding='utf-8')
 
