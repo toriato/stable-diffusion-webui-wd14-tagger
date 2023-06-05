@@ -169,9 +169,10 @@ def on_interrogate(
             )
 
             if verbose:
-                print(
-                    f'found {len(processed_tags)} tags out of {len(tags)} from {path}'
-                )
+                print(f'{path}: {len(processed_tags)}/{len(tags)} tags found')
+            else:
+                # go up one line so the bar does not mess up the console
+                print("\033[F", end="")
 
             plain_tags = ', '.join(processed_tags)
 
