@@ -39,6 +39,7 @@ def on_interrogate(
 
     interrogator: str,
     threshold: float,
+    tag_count_threshold: float,
     additional_tags: str,
     exclude_tags: str,
     sort_by_alphabetical_order: bool,
@@ -204,6 +205,10 @@ def on_interrogate(
                 tags,
                 *postprocess_opts
             )
+            if tag_count_threshold < len(processed_tags):
+                processed_tags = [(k, v) for k, v in processed_tags.items()]
+                processed_tags.sort(key=lambda x: x[1], reverse=True)
+                processed_tags = dict(processed_tags[:int(tag_count_threshold)])
 
             if verbose:
                 print(f'{path}: {len(processed_tags)}/{len(tags)} tags found')
@@ -429,6 +434,15 @@ def on_ui_tabs():
                     value=0.35
                 )
 
+                tag_count_threshold = utils.preset.component(
+                    gr.Slider,
+                    label='Tag count threshold',
+                    minimum=0,
+                    maximum=1000,
+                    value=100,
+                    step=1.0
+                )
+
                 additional_tags = utils.preset.component(
                     gr.Textbox,
                     label='Additional tags (split by comma)',
@@ -537,6 +551,7 @@ def on_ui_tabs():
                     # options
                     interrogator,
                     threshold,
+                    tag_count_threshold,
                     additional_tags,
                     exclude_tags,
                     sort_by_alphabetical_order,
