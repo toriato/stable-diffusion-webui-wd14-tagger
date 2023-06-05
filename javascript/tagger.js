@@ -78,6 +78,9 @@ document.addEventListener('DOMContentLoaded', () => {
         function onClickLabels(e) {
             // find clicked label item's wrapper element
             const tag = e.target.innerText;
+            if (tag.endsWith('%')) {
+                return
+            }
 
             // ignore if tag is already exist in textbox
             const escapedTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
