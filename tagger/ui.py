@@ -355,7 +355,7 @@ def on_ui_tabs():
                             value='ignore',
                             choices=[
                                 'ignore',
-                                'copy',
+                                'replace',
                                 'append',
                                 'prepend'
                             ]
