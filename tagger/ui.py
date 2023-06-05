@@ -2,6 +2,7 @@ import os
 import json
 import gradio as gr
 import tqdm
+import re
 
 from collections import OrderedDict
 from pathlib import Path
@@ -122,6 +123,19 @@ def on_interrogate(
         ]
         nr_of_files = len(paths)
 
+        add_tag_list = list(map(str.strip, additional_tags.split(',')))
+        rem_tags = list(map(str.strip, exclude_tags.split(',')))
+
+        # the first entry can be a regexp, if a string like /.*/
+        rem_re = None
+        if len(rem_tags) > 0:
+            if len(rem_tags[0]) > 2:
+                if rem_tags[0][0] == '/' and rem_tags[0][-1] == '/':
+                    rem_re = re.compile(rem_tags[0][1:-1])
+                    del rem_tags[0]
+
+        rem_tags = set(rem_tags)
+
         print(f'found {len(paths)} image(s)')
         for path in tqdm.tqdm(paths, disable=verbose, desc='Tagging'):
             try:
@@ -199,12 +213,25 @@ def on_interrogate(
                     for k, v in weights.items():
                         combined[k] = combined[k] + v if k in combined else v
                     continue
+            if batch_output_action_on_conflict != 'filter':
+                ratings, tags = interrogator.interrogate(image)
+                processed_tags = Interrogator.postprocess_tags(
+                    tags,
+                    *postprocess_opts
+                )
+            else:
+                for t in add_tag_list:
+                    weights[t] = 1.0
 
-            ratings, tags = interrogator.interrogate(image)
-            processed_tags = Interrogator.postprocess_tags(
-                tags,
-                *postprocess_opts
-            )
+                for k in list(weights.keys()):
+                    if k in rem_tags or rem_re and rem_re.match(k):
+                        del weights[k]
+
+                processed_tags = weights
+                tags = weights.keys()
+                batch_output_save_json = False
+                output = None
+
             if tag_count_threshold < len(processed_tags):
                 processed_tags = [(k, v) for k, v in processed_tags.items()]
                 processed_tags.sort(key=lambda x: x[1], reverse=True)
@@ -357,7 +384,8 @@ def on_ui_tabs():
                                 'ignore',
                                 'replace',
                                 'append',
-                                'prepend'
+                                'prepend',
+                                'filter'
                             ]
                         )
 
