@@ -161,12 +161,7 @@ def on_interrogate(
             output = []
 
             if output_path.is_file():
-                if batch_output_action_on_conflict == 'ignore':
-                    if verbose:
-                        print(f'skipping {path}')
-                    continue
-
-                elif batch_output_action_on_conflict != 'replace':
+                if batch_output_action_on_conflict != 'replace':
                     txt = output_path.read_text(errors='ignore').strip()
                     output = list(map(str.strip, txt.split(',')))
                     # read the previous interrogation count, if any
@@ -188,8 +183,15 @@ def on_interrogate(
                                 v = float(k[at+1:-1])
                                 weights[k[1:at]] = v
                             else:
-                                print(f'{path}: no weights, assumrd linear')
+                                print(f'{path}: no weights, assumed linear')
                                 weights[k] = (n - i) / n
+
+                if batch_output_action_on_conflict == 'ignore':
+                    if verbose:
+                        print(f'skipping {path}')
+                    for k, v in weights.items():
+                        combined[k] = combined[k] + v if k in combined else v
+                    continue
 
             ratings, tags = interrogator.interrogate(image)
             processed_tags = Interrogator.postprocess_tags(
@@ -201,6 +203,8 @@ def on_interrogate(
                 print(f'{path}: {len(processed_tags)}/{len(tags)} tags found')
 
             if batch_output_action_on_conflict == 'replace' or not output:
+                for k, v in processed_tags.items():
+                    combined[k] = combined[k] + v if k in combined else v
                 output = [', '.join(processed_tags)]
 
             elif len(processed_tags) > 0:
