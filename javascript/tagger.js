@@ -77,13 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
          */
         function onClickLabels(e) {
             // find clicked label item's wrapper element
-            const $tag = e.target.closest('.output-label > div:not(:first-child)')
-            if (!$tag) {
-                return
-            }
-
-            /** @type {string} */
-            const tag = $tag.querySelector('.leading-snug').textContent
+            const tag = e.target.innerText;
 
             // ignore if tag is already exist in textbox
             const escapedTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
