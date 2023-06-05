@@ -78,7 +78,7 @@ def on_interrogate(
             interrogator.unload()
 
         return [
-            ', '.join(processed_tags),
+            ', '.join(processed_tags.keys() if add_confident_as_weight else processed_tags),
             ratings,
             tags,
             ''
