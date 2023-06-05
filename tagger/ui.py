@@ -88,6 +88,8 @@ def on_interrogate(
     batch_input_glob = batch_input_glob.strip()
     batch_output_dir = batch_output_dir.strip()
     batch_output_filename_format = batch_output_filename_format.strip()
+    combined = {}
+    nr_of_files = 0
 
     if batch_input_glob != '':
         # if there is no glob pattern, insert it automatically
@@ -117,6 +119,7 @@ def on_interrogate(
             for p in glob(batch_input_glob, recursive=batch_input_recursive)
             if '.' + p.split('.').pop().lower() in supported_extensions
         ]
+        nr_of_files = len(paths)
 
         print(f'found {len(paths)} image(s)')
         for path in tqdm.tqdm(paths, disable=verbose, desc='Tagging'):
@@ -221,11 +224,13 @@ def on_interrogate(
                             del weights[k]
                         v = v / (ict + 1.0)
                         output.append((k, v))
+                        combined[k] = combined[k] + v if k in combined else v
 
                     # non-recurrent weights are also re-averaged
                     for k, v in weights.items():
                         v = (v * ict) / (ict + 1.0)
                         output.append((k, v))
+                        combined[k] = combined[k] + v if k in combined else v
 
                     output.sort(key=lambda x: x[1], reverse=True)
                     output = list(map(lambda x: '(%s:%f)' % x, output))
@@ -253,7 +258,18 @@ def on_interrogate(
     if unload_model_after_running:
         interrogator.unload()
 
-    return ['', None, None, '']
+    if nr_of_files > 0:
+        for k, v in combined.items():
+            combined[k] = v / nr_of_files
+
+    tag_confidents = dict(filter(lambda x: x[0][:7] != "rating:" and x[1] > threshold / 2, combined.items()))
+    tags = dict(filter(lambda x: x[1] > threshold, tag_confidents.items()))
+    tags = ', '.join(tags.keys())
+
+    rating_confidents = dict(filter(lambda x: x[0][8:] == "rating:", combined.items()))
+    rating_confidents = dict(map(lambda x: (x[0][:7], x[1]), rating_confidents.items()))
+
+    return [tags, rating_confidents, tag_confidents, '']
 
 
 def on_ui_tabs():
