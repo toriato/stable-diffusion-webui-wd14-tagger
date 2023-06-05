@@ -154,10 +154,10 @@ def on_interrogate(
             output_path = output_dir.joinpath(formatted_output_filename)
 
             # instead of pre- or appending weights, update them (re-average).
-            # ict, the interrogation count, is used to average
-            # the default of 1 will be overridden, when read from file
+            # ict, the interrogation count, is used to re-average
+            # the default of 0.0 will be overridden, when read from file
             weights = {}
-            ict = 1.0
+            ict = 0.0
             output = []
 
             if output_path.is_file():
@@ -172,19 +172,18 @@ def on_interrogate(
                         except ValueError:
                             pass
 
-                    if add_confident_as_weight:
-                        n = len(output)
-                        for i in range(n):
-                            # split the key and weight, if present
-                            k = output[i]
-                            at = k.rfind(':')
+                    n = len(output)
+                    for i in range(n):
+                        # split the key and weight, if present
+                        k = output[i]
+                        at = k.rfind(':')
 
-                            if at > 0 and k[0] == '(' and k[-1] == ')':
-                                v = float(k[at+1:-1])
-                                weights[k[1:at]] = v
-                            else:
-                                print(f'{path}: no weights, assumed linear')
-                                weights[k] = (n - i) / n
+                        if at > 0 and k[0] == '(' and k[-1] == ')':
+                            v = float(k[at+1:-1])
+                            weights[k[1:at]] = v
+                        else:
+                            print(f'{path}: no weights, assumed linear')
+                            weights[k] = (n - i) / n
 
                 if batch_output_action_on_conflict == 'ignore':
                     if verbose:
@@ -204,6 +203,10 @@ def on_interrogate(
 
             if batch_output_action_on_conflict == 'replace' or not output:
                 for k, v in processed_tags.items():
+                    # processed tags keys, if weighed, contain value, strip it.
+                    at = k.rfind(':')
+                    if at > 0 and k[0] == '(':
+                        k = k[1:at]
                     combined[k] = combined[k] + v if k in combined else v
                 output = [', '.join(processed_tags)]
 
@@ -212,10 +215,7 @@ def on_interrogate(
                     output = []
 
                     for k, v in processed_tags.items():
-                        # XXX strangely, keys seem to contain value too. bug or
-                        # an ordered dict property?
                         at = k.rfind(':')
-
                         if at > 0 and k[0] == '(':
                             k = k[1:at]
 
@@ -238,8 +238,7 @@ def on_interrogate(
                 elif batch_output_action_on_conflict == 'prepend':
                     output.insert(0, ', '.join(processed_tags) + ', ')
                 else:
-                    output[0] += ', '
-                    output.append(', '.join(processed_tags))
+                    output.append(', ' + ', '.join(processed_tags))
 
             if batch_remove_duplicated_tag and not add_confident_as_weight:
                 output_str = ','.join(output).split(',')
@@ -259,18 +258,18 @@ def on_interrogate(
     if unload_model_after_running:
         interrogator.unload()
 
-    if nr_of_files > 0:
-        for k, v in combined.items():
-            combined[k] = v / nr_of_files
+    tag_confidents = {}
+    rating_confidents = {}
+    tags = []
+    for k, v in combined.items():
+        if k[:7] == "rating:":
+            rating_confidents[k[8:]] = v / nr_of_files
+        elif v / nr_of_files >= threshold / 2:
+            tag_confidents[k] = v / nr_of_files
+            if v / nr_of_files >= threshold:
+                tags.append(k)
 
-    tag_confidents = dict(filter(lambda x: x[0][:7] != "rating:" and x[1] > threshold / 2, combined.items()))
-    tags = dict(filter(lambda x: x[1] > threshold, tag_confidents.items()))
-    tags = ', '.join(tags.keys())
-
-    rating_confidents = dict(filter(lambda x: x[0][8:] == "rating:", combined.items()))
-    rating_confidents = dict(map(lambda x: (x[0][:7], x[1]), rating_confidents.items()))
-
-    return [tags, rating_confidents, tag_confidents, '']
+    return [', '.join(tags), rating_confidents, tag_confidents, '']
 
 
 def on_ui_tabs():
