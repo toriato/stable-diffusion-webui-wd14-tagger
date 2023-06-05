@@ -148,19 +148,45 @@ def on_interrogate(
             except (TypeError, ValueError) as error:
                 return ['', None, None, str(error)]
 
-            output_path = output_dir.joinpath(
-                formatted_output_filename
-            )
+            output_path = output_dir.joinpath(formatted_output_filename)
 
+            # instead of pre- or appending weights, update them (re-average).
+            # ict, the interrogation count, is used to average
+            # the default of 1 will be overridden, when read from file
+            weights = {}
+            ict = 1.0
             output = []
 
-            if output_path.is_file() and batch_output_action_on_conflict != 'copy':
-                output.append(output_path.read_text(errors='ignore').strip())
-
+            if output_path.is_file():
                 if batch_output_action_on_conflict == 'ignore':
                     if verbose:
                         print(f'skipping {path}')
                     continue
+
+                elif batch_output_action_on_conflict != 'replace':
+                    txt = output_path.read_text(errors='ignore').strip()
+                    output = list(map(str.strip, txt.split(',')))
+                    # read the previous interrogation count, if any
+                    if len(output) > 0:
+                        try:
+                            ict = float(output[-1])
+                            del output[-1]
+                        except ValueError:
+                            pass
+
+                    if add_confident_as_weight:
+                        n = len(output)
+                        for i in range(n):
+                            # split the key and weight, if present
+                            k = output[i]
+                            at = k.rfind(':')
+
+                            if at > 0 and k[0] == '(' and k[-1] == ')':
+                                v = float(k[at+1:-1])
+                                weights[k[1:at]] = v
+                            else:
+                                print(f'{path}: no weights, assumrd linear')
+                                weights[k] = (n - i) / n
 
             ratings, tags = interrogator.interrogate(image)
             processed_tags = Interrogator.postprocess_tags(
@@ -174,32 +200,49 @@ def on_interrogate(
                 # go up one line so the bar does not mess up the console
                 print("\033[F", end="")
 
-            plain_tags = ', '.join(processed_tags)
+            if batch_output_action_on_conflict == 'replace' or not output:
+                output = [', '.join(processed_tags)]
 
-            if batch_output_action_on_conflict == 'copy' or len(output) == 0:
-                output = [plain_tags]
-            elif len(plain_tags) > 0:
-                if batch_output_action_on_conflict == 'prepend':
-                    plain_tags += ', '
-                    output.insert(0, plain_tags)
+            elif len(processed_tags) > 0:
+                if add_confident_as_weight:
+                    output = []
+
+                    for k, v in processed_tags.items():
+                        # XXX strangely, keys seem to contain value too. bug or
+                        # an ordered dict property?
+                        at = k.rfind(':')
+
+                        if at > 0 and k[0] == '(':
+                            k = k[1:at]
+
+                        # recurrent weights or new ones are re-averaged
+                        if k in weights:
+                            v += weights[k] * ict
+                            del weights[k]
+                        v = v / (ict + 1.0)
+                        output.append((k, v))
+
+                    # non-recurrent weights are also re-averaged
+                    for k, v in weights.items():
+                        v = (v * ict) / (ict + 1.0)
+                        output.append((k, v))
+
+                    output.sort(key=lambda x: x[1], reverse=True)
+                    output = list(map(lambda x: '(%s:%f)' % x, output))
+                elif batch_output_action_on_conflict == 'prepend':
+                    output.insert(0, ', '.join(processed_tags) + ', ')
                 else:
                     output[0] += ', '
-                    output.append(plain_tags)
+                    output.append(', '.join(processed_tags))
 
-            if batch_remove_duplicated_tag:
-                output_path.write_text(
-                    ', '.join(
-                        OrderedDict.fromkeys(
-                            map(str.strip, ','.join(output).split(','))
-                        )
-                    ),
-                    encoding='utf-8'
-                )
-            else:
-                output_path.write_text(
-                    ', '.join(output),
-                    encoding='utf-8'
-                )
+            if batch_remove_duplicated_tag and not add_confident_as_weight:
+                output_str = ','.join(output).split(',')
+                output = OrderedDict.fromkeys(map(str.strip, output_str))
+
+            # postpend the incremented interrogation count
+            output.append(str(ict + 1.0))
+
+            output_path.write_text(', '.join(output), encoding='utf-8')
 
             if batch_output_save_json:
                 output_path.with_suffix('.json').write_text(
