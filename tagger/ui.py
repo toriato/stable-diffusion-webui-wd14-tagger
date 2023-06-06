@@ -258,11 +258,11 @@ def on_interrogate(
                             k = re.sub(search, replace, k, 1)
                             if k in weights:
                                 v = v + weights[k]
-                            weights[k] = v
+                            weights[k] = min(v, 1)
                             break
 
                 processed_tags = weights
-                tags = weights.keys()
+                tags = list(weights.keys())
                 tags.sort(key=lambda x: weights[x], reverse=True)
                 batch_output_save_json = False
                 output = None
