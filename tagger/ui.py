@@ -43,6 +43,9 @@ def on_interrogate(
     tag_count_threshold: float,
     additional_tags: str,
     exclude_tags: str,
+    search_tags: str,
+    replace_tags: str,
+    ingore_case: bool,
     sort_by_alphabetical_order: bool,
     add_confident_as_weight: bool,
     replace_underscore: bool,
@@ -127,14 +130,26 @@ def on_interrogate(
         rem_tags = list(map(str.strip, exclude_tags.split(',')))
 
         # the first entry can be a regexp, if a string like /.*/
+        # TODO: 3.11 supports re.NOFLAG, value is also 0.
+        re_f = re.IGNORECASE if ingore_case else 0
         rem_re = None
         if len(rem_tags) > 0:
             if len(rem_tags[0]) > 2:
                 if rem_tags[0][0] == '/' and rem_tags[0][-1] == '/':
-                    rem_re = re.compile(rem_tags[0][1:-1])
+                    rem_re = re.compile(rem_tags[0][1:-1], flags=re_f)
                     del rem_tags[0]
 
         rem_tags = set(rem_tags)
+
+        def re_comp(x):
+            re.compile('^'+str.strip(x)+'$', flags=re_f)
+
+        search_tag_list = list(map(re_comp, search_tags.split(',')))
+        replace_tag_list = list(map(str.strip, replace_tags.split(',')))
+        if len(search_tag_list) != len(replace_tag_list):
+            print("search and replace strings have different counts, ignoring")
+            search_tag_list = []
+            replace_tag_list = []
 
         print(f'found {len(paths)} image(s)')
         for path in tqdm.tqdm(paths, disable=verbose, desc='Tagging'):
@@ -226,6 +241,20 @@ def on_interrogate(
                 for k in list(weights.keys()):
                     if k in rem_tags or rem_re and rem_re.match(k):
                         del weights[k]
+                        continue
+
+                    for i in range(len(search_tag_list)):
+                        search = search_tag_list[i]
+                        replace = replace_tag_list[i]
+
+                        if replace and re.match(replace, k):
+                            v = weights[k]
+                            new_k = re.sub(search, replace, k, 1)
+                            if new_k in weights:
+                                v = v + weights[new_k]
+                            weights[new_k] = v
+                            del weights[k]
+                            break
 
                 processed_tags = weights
                 tags = weights.keys()
@@ -482,6 +511,23 @@ def on_ui_tabs():
                     label='Exclude tags (split by comma)',
                     elem_id='exclude-tags'
                 )
+                with gr.Row(variant='compact'):
+                    search_tags = utils.preset.component(
+                        gr.Textbox,
+                        label='Search tags (split by comma)',
+                        elem_id='search-tags'
+                    )
+
+                    replace_tags = utils.preset.component(
+                        gr.Textbox,
+                        label='Replacement tags (split by comma)',
+                        elem_id='replace-tags'
+                    )
+                ingore_case = utils.preset.component(
+                    gr.Checkbox,
+                    label='Ignore case',
+                    value=True
+                )
                 sort_by_alphabetical_order = utils.preset.component(
                     gr.Checkbox,
                     label='Sort by alphabetical order',
@@ -582,6 +628,9 @@ def on_ui_tabs():
                     tag_count_threshold,
                     additional_tags,
                     exclude_tags,
+                    search_tags,
+                    replace_tags,
+                    ingore_case,
                     sort_by_alphabetical_order,
                     add_confident_as_weight,
                     replace_underscore,
