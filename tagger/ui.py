@@ -142,7 +142,7 @@ def on_interrogate(
         rem_tags = set(rem_tags)
 
         def re_comp(x):
-            re.compile('^'+str.strip(x)+'$', flags=re_f)
+            return re.compile('^'+str.strip(x)+'$', flags=re_f)
 
         search_tag_list = list(map(re_comp, search_tags.split(',')))
         replace_tag_list = list(map(str.strip, replace_tags.split(',')))
@@ -247,7 +247,7 @@ def on_interrogate(
                         search = search_tag_list[i]
                         replace = replace_tag_list[i]
 
-                        if replace and re.match(replace, k):
+                        if replace and re.match(search, k):
                             v = weights[k]
                             new_k = re.sub(search, replace, k, 1)
                             if new_k in weights:
