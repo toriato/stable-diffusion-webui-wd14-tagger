@@ -28,6 +28,14 @@ def unload_interrogators():
     return [f'Successfully unload {unloaded_models} model(s)']
 
 
+def split_weighed_key(key: str):
+    # processed tags keys, if weighed, contain value, strip it.
+    at = key.rfind(':')
+    if at > 0 and key[0] == '(' and key[-1] == ')':
+        return (key[1:at], float(key[at+1:-1]))
+    return (key, 0.0)
+
+
 def on_interrogate(
     image: Image,
     batch_input_glob: str,
@@ -205,14 +213,11 @@ def on_interrogate(
                     n = len(output)
                     for i in range(n):
                         # split the key and weight, if present
-                        k = output[i]
-                        at = k.rfind(':')
-
-                        if at > 0 and k[0] == '(' and k[-1] == ')':
-                            v = float(k[at+1:-1])
-                            weights[k[1:at]] = v
+                        (k, v) = split_weighed_key(output[i])
+                        if v > 0.0:
+                            weights[k] = v
                             if not add_confident_as_weight:
-                                output[i] = k[1:at]
+                                output[i] = k
                         else:
                             # FIXME: exponential, hyperbolic, or harmonic
                             # decline is probably a more realistic fit
@@ -272,10 +277,7 @@ def on_interrogate(
 
             if batch_output_action_on_conflict == 'replace' or not output:
                 for k, v in processed_tags.items():
-                    # processed tags keys, if weighed, contain value, strip it.
-                    at = k.rfind(':')
-                    if at > 0 and k[0] == '(':
-                        k = k[1:at]
+                    k = split_weighed_key(k)[0]
                     combined[k] = combined[k] + v if k in combined else v
                 output = [', '.join(processed_tags)]
 
@@ -284,9 +286,7 @@ def on_interrogate(
                     output = []
 
                     for k, v in processed_tags.items():
-                        at = k.rfind(':')
-                        if at > 0 and k[0] == '(':
-                            k = k[1:at]
+                        k = split_weighed_key(k)[0]
 
                         # recurrent weights or new ones are re-averaged
                         if k in weights:
