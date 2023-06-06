@@ -333,7 +333,7 @@ def on_interrogate(
     tags = []
     for k, v in combined.items():
         if k[:7] == "rating:":
-            rating_confidents[k[8:]] = v / nr_of_files
+            rating_confidents[k[7:]] = v / nr_of_files
         elif v / nr_of_files >= threshold / 2:
             tag_confidents[k] = v / nr_of_files
             if v / nr_of_files >= threshold:
