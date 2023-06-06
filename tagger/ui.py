@@ -249,15 +249,16 @@ def on_interrogate(
 
                         if replace and re.match(search, k):
                             v = weights[k]
-                            new_k = re.sub(search, replace, k, 1)
-                            if new_k in weights:
-                                v = v + weights[new_k]
-                            weights[new_k] = v
                             del weights[k]
+                            k = re.sub(search, replace, k, 1)
+                            if k in weights:
+                                v = v + weights[k]
+                            weights[k] = v
                             break
 
                 processed_tags = weights
                 tags = weights.keys()
+                tags.sort(key=lambda x: weights[x], reverse=True)
                 batch_output_save_json = False
                 output = None
 
