@@ -233,7 +233,7 @@ def on_interrogate(
                     for k, v in weights.items():
                         combined[k] = combined[k] + v if k in combined else v
                     continue
-            if batch_output_action_on_conflict != 'filter':
+            if batch_output_action_on_conflict != 'update':
                 ratings, tags = interrogator.interrogate(image)
                 processed_tags = Interrogator.postprocess_tags(
                     tags,
@@ -415,7 +415,7 @@ def on_ui_tabs():
                                 'replace',
                                 'append',
                                 'prepend',
-                                'filter'
+                                'update'
                             ]
                         )
 
