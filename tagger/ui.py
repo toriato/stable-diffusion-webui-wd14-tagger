@@ -504,7 +504,7 @@ def on_ui_tabs():
                 additional_tags = utils.preset.component(
                     gr.Textbox,
                     label='Additional tags (split by comma)',
-                    elem_id='additioanl-tags'
+                    elem_id='additional-tags'
                 )
 
                 exclude_tags = utils.preset.component(

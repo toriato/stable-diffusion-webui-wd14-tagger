@@ -43,7 +43,7 @@ function waitQuerySelector(selector, timeout = 5000, $rootElement = gradioApp())
 document.addEventListener('DOMContentLoaded', () => {
     Promise.all([
         // option texts
-        waitQuerySelector('#additioanl-tags'),
+        waitQuerySelector('#additional-tags'),
         waitQuerySelector('#exclude-tags'),
 
         // tag-confident labels
