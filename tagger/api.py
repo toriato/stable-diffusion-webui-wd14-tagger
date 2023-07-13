@@ -38,6 +38,13 @@ class Api:
             response_model=models.InterrogatorsResponse
         )
 
+        self.add_api_route(
+            "unload-interrogators",
+            self.endpoint_unload_interrogators,
+            methods=["POST"],
+            response_model=str,
+        )
+
     def auth(self, creds: HTTPBasicCredentials = Depends(HTTPBasic())):
         if creds.username in self.credentials:
             if compare_digest(creds.password, self.credentials[creds.username]):
@@ -84,6 +91,15 @@ class Api:
         return models.InterrogatorsResponse(
             models=list(utils.interrogators.keys())
         )
+
+    def endpoint_unload_interrogators(self):
+        unloaded_models = 0
+
+        for i in utils.interrogators.values():
+            if i.unload():
+                unloaded_models = unloaded_models + 1
+
+        return f"Successfully unload {unloaded_models} model(s)"
 
 
 def on_app_started(_, app: FastAPI):
