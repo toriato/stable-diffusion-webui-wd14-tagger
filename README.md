@@ -1,5 +1,10 @@
-Tagger for [Automatic1111's WebUI](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
+***This branch is unmaintained!***
+https://github.com/toriato/stable-diffusion-webui-wd14-tagger/issues/108
 ---
+https://github.com/picobyte/stable-diffusion-webui-wd14-tagger
+
+
+# Tagger for [Automatic1111's WebUI](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
 Interrogate booru style tags for single or multiple image files using various models, such as DeepDanbooru.
 
 [한국어를 사용하시나요? 여기에 한국어 설명서가 있습니다!](README.ko.md)
