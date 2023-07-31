@@ -61,19 +61,19 @@ def refresh_interrogators() -> List[str]:
         ),
     }
 
-    # load deepdanbooru project
-    os.makedirs(
-        getattr(shared.cmd_opts, 'deepdanbooru_projects_path', default_ddp_path),
-        exist_ok=True
-    )
 
-    for path in os.scandir(shared.cmd_opts.deepdanbooru_projects_path):
+    # load deepdanbooru project
+    deepdanbooru_projects_path = getattr(shared.cmd_opts, 'deepdanbooru_projects_path', default_ddp_path)
+
+    os.makedirs(deepdanbooru_projects_path, exist_ok=True)
+
+    for path in os.scandir(deepdanbooru_projects_path):
         if not path.is_dir():
             continue
-
+        
         if not Path(path, 'project.json').is_file():
             continue
-
+        
         interrogators[path.name] = DeepDanbooruInterrogator(path.name, path)
 
     return sorted(interrogators.keys())
